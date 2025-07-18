@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { showSuccess } from "@/utils/toast";
 import { useNavigate } from "react-router-dom";
 import { useWorkflow } from "./WorkflowContext";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 
 const AGENCIES = ["Paris", "Lyon", "Marseille"];
 const FUNCTIONS = ["Développeur", "Designer", "Chef de projet"];
@@ -27,6 +28,7 @@ export const TeamSelectionStep = () => {
   const [selectedFunctions, setSelectedFunctions] = useState<string[]>([]);
   const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [openReset, setOpenReset] = useState(false);
   const navigate = useNavigate();
   const { setSelectedTeam } = useWorkflow();
 
@@ -49,6 +51,7 @@ export const TeamSelectionStep = () => {
     setSelectedFunctions([]);
     setSelectedLevels([]);
     setSelectedIds([]);
+    setOpenReset(false);
   };
 
   const handleValidate = () => {
@@ -108,7 +111,7 @@ export const TeamSelectionStep = () => {
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-4">
         <Button
           variant="outline"
-          onClick={handleReset}
+          onClick={() => setOpenReset(true)}
           className="rounded-full px-8 py-2 text-base font-semibold border-2 border-brand-dark text-brand-dark bg-white hover:bg-brand-pale transition"
         >
           Réinitialiser
@@ -122,6 +125,22 @@ export const TeamSelectionStep = () => {
         </Button>
       </div>
       <TeamCounter count={selectedIds.length} />
+      <AlertDialog open={openReset} onOpenChange={setOpenReset}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Réinitialiser la sélection ?</AlertDialogTitle>
+          </AlertDialogHeader>
+          <div>Cette action va effacer tous les filtres et la sélection en cours.</div>
+          <AlertDialogFooter>
+            <AlertDialogCancel asChild>
+              <Button variant="outline">Annuler</Button>
+            </AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Button variant="destructive" onClick={handleReset}>Réinitialiser</Button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
