@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { showSuccess } from "@/utils/toast";
 import { useWorkflow } from "./WorkflowContext";
+import { useNavigate } from "react-router-dom";
 
 type Reference = {
   id: string;
@@ -69,6 +70,7 @@ export const ReferenceSelectionStep = () => {
   const [montantMax, setMontantMax] = useState<number | "">("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const { setSelectedReferences } = useWorkflow();
+  const navigate = useNavigate();
 
   const filteredReferences = useMemo(() => {
     return MOCK_REFERENCES.filter((ref) =>
@@ -98,7 +100,9 @@ export const ReferenceSelectionStep = () => {
   const handleValidate = () => {
     setSelectedReferences(selectedIds);
     showSuccess("Références validées !");
-    // TODO: Passer à l'étape suivante (génération)
+    setTimeout(() => {
+      navigate("/recap");
+    }, 600);
   };
 
   return (
