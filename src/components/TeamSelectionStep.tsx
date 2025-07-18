@@ -20,6 +20,8 @@ const EMPLOYEES: Employee[] = [
   { id: "6", name: "Fabrice Petit", agency: "Marseille", function: "Designer", level: "Junior" },
 ];
 
+export { EMPLOYEES };
+
 export const TeamSelectionStep = () => {
   const [selectedAgencies, setSelectedAgencies] = useState<string[]>([]);
   const [selectedFunctions, setSelectedFunctions] = useState<string[]>([]);
