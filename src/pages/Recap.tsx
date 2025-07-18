@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { showSuccess } from "@/utils/toast";
+import { Pencil } from "lucide-react";
 
 const MOCK_REFERENCES = [
   {
@@ -79,13 +80,28 @@ export const RecapStep = () => {
     }, 1000);
   };
 
+  const handleEditAssociation = () => {
+    navigate("/association");
+  };
+
   return (
     <div className="max-w-5xl mx-auto py-10 px-2">
       <h2 className="text-4xl font-extrabold mb-10 text-center text-brand-dark tracking-tight drop-shadow-sm">
         Récapitulatif de la sélection
       </h2>
       <div className="mb-8">
-        <h3 className="text-2xl font-bold mb-4 text-brand-blue">Équipe sélectionnée & Références associées</h3>
+        <h3 className="text-2xl font-bold mb-4 text-brand-blue flex items-center gap-2">
+          Équipe sélectionnée & Références associées
+          <Button
+            variant="outline"
+            size="sm"
+            className="ml-2 px-3 py-1 rounded-full border-brand-blue text-brand-blue font-semibold flex items-center gap-1"
+            onClick={handleEditAssociation}
+          >
+            <Pencil size={16} className="mr-1" />
+            Modifier associations
+          </Button>
+        </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
           {team.map((member) => (
             <div key={member.id} className="bg-white rounded-xl shadow p-4 border-2 border-brand-dark">
