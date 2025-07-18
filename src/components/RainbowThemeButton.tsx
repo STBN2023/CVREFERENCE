@@ -1,15 +1,13 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Sparkles } from "lucide-react";
 
 function randomHSL(hueBase: number, sat = 70, light = 50) {
-  // hueBase: 0-360, sat: 0-100, light: 0-100
   const hue = (hueBase + Math.floor(Math.random() * 60) - 30 + 360) % 360;
   return `${hue} ${sat}% ${light}%`;
 }
 
 function randomThemeVars() {
-  // Génère des couleurs harmonieuses pour le thème
   const base = Math.floor(Math.random() * 360);
   return {
     "--background": randomHSL(base + 40, 100, 97),
@@ -30,27 +28,65 @@ function randomThemeVars() {
   };
 }
 
+// Couleurs de la charte graphique d'origine
+const ORIGINAL_THEME: Record<string, string> = {
+  "--background": "0 0% 100%",
+  "--foreground": "222.2 84% 4.9%",
+  "--primary": "222.2 47.4% 11.2%",
+  "--primary-foreground": "210 40% 98%",
+  "--secondary": "210 40% 96.1%",
+  "--secondary-foreground": "222.2 47.4% 11.2%",
+  "--accent": "210 40% 96.1%",
+  "--accent-foreground": "222.2 47.4% 11.2%",
+  "--muted": "210 40% 96.1%",
+  "--muted-foreground": "215.4 16.3% 46.9%",
+  "--brand-dark": "#1D1E3D",
+  "--brand-yellow": "#EBC14A",
+  "--brand-pale": "#FCE7B3",
+  "--brand-blue": "#266EB1",
+  "--brand-lightblue": "#D9ECFB",
+};
+
 export const RainbowThemeButton = () => {
   const [spinning, setSpinning] = useState(false);
+  const clickTimeout = useRef<number | null>(null);
 
-  const handleClick = () => {
-    setSpinning(true);
-    const vars = randomThemeVars();
+  // Applique un jeu de variables CSS
+  const applyTheme = (vars: Record<string, string>) => {
     const root = document.documentElement;
     Object.entries(vars).forEach(([key, value]) => {
       root.style.setProperty(key, value);
     });
+  };
+
+  // Simple clic = thème aléatoire
+  const handleClick = () => {
+    setSpinning(true);
+    applyTheme(randomThemeVars());
     setTimeout(() => setSpinning(false), 600);
   };
 
+  // Double clic = retour à la charte graphique
+  const handleDoubleClick = () => {
+    setSpinning(true);
+    applyTheme(ORIGINAL_THEME);
+    setTimeout(() => setSpinning(false), 600);
+  };
+
+  // Gestion du double clic natif
   return (
     <Button
       onClick={handleClick}
+      onDoubleClick={e => {
+        e.preventDefault();
+        handleDoubleClick();
+      }}
       variant="ghost"
       size="icon"
       className="fixed top-4 right-4 z-50 bg-white/80 hover:bg-white border-2 border-brand-yellow shadow-lg"
       aria-label="Générer un thème arc-en-ciel"
       style={{ transition: "box-shadow 0.2s" }}
+      title="Clic : thème aléatoire / Double-clic : thème d'origine"
     >
       <span className="sr-only">Changer le thème de couleurs</span>
       <svg
