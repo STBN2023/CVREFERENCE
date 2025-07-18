@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogC
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { showSuccess } from "@/utils/toast";
-import { Trash2, UserPlus, FilePlus2 } from "lucide-react";
+import { Trash2, UserPlus, FilePlus2, Users } from "lucide-react";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 
 type Salarie = {
@@ -26,6 +26,7 @@ type Reference = {
   type_mission: string;
   montant: number;
   description_projet: string;
+  salaries: string[]; // Liste des IDs des salariés associés
 };
 
 const AGENCES = ["Paris", "Lyon", "Marseille", "Bordeaux", "Lille", "Toulouse"];
@@ -50,6 +51,7 @@ const MOCK_REFERENCES: Reference[] = [
     montant: 12000000,
     client: "Société Générale",
     description_projet: "Construction d'une tour de bureaux de 45 étages.",
+    salaries: ["1", "2"],
   },
   {
     id: "2",
@@ -60,6 +62,7 @@ const MOCK_REFERENCES: Reference[] = [
     montant: 8000000,
     client: "CHU Lyon",
     description_projet: "Rénovation complète du pôle maternité.",
+    salaries: ["2"],
   },
   {
     id: "3",
@@ -70,6 +73,7 @@ const MOCK_REFERENCES: Reference[] = [
     montant: 5000000,
     client: "Université Toulouse",
     description_projet: "Extension du campus universitaire avec laboratoires.",
+    salaries: [],
   },
 ];
 
@@ -97,6 +101,7 @@ function Admin() {
     type_mission: "",
     montant: 0,
     description_projet: "",
+    salaries: [],
   });
 
   // Suppression dialogs
@@ -135,6 +140,7 @@ function Admin() {
       type_mission: "",
       montant: 0,
       description_projet: "",
+      salaries: [],
     });
     showSuccess("Référence ajoutée !");
   };
@@ -153,6 +159,16 @@ function Admin() {
       setDeleteReferenceId(null);
       showSuccess("Référence supprimée !");
     }
+  };
+
+  // Multi-select pour salariés associés à une référence
+  const handleToggleSalarieForReference = (id: string) => {
+    setReferenceForm((prev) => ({
+      ...prev,
+      salaries: prev.salaries.includes(id)
+        ? prev.salaries.filter((sid) => sid !== id)
+        : [...prev.salaries, id],
+    }));
   };
 
   return (
@@ -227,13 +243,14 @@ function Admin() {
                 <th className="px-4 py-2 text-left">Année</th>
                 <th className="px-4 py-2 text-left">Type</th>
                 <th className="px-4 py-2 text-left">Montant</th>
+                <th className="px-4 py-2 text-left">Salariés associés</th>
                 <th className="px-4 py-2 text-left"></th>
               </tr>
             </thead>
             <tbody>
               {references.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center py-6 text-gray-400">Aucune référence</td>
+                  <td colSpan={8} className="text-center py-6 text-gray-400">Aucune référence</td>
                 </tr>
               )}
               {references.map((r) => (
@@ -244,6 +261,22 @@ function Admin() {
                   <td className="px-4 py-2">{r.annee}</td>
                   <td className="px-4 py-2">{r.type_mission}</td>
                   <td className="px-4 py-2">{r.montant.toLocaleString()} €</td>
+                  <td className="px-4 py-2">
+                    {r.salaries.length === 0 ? (
+                      <span className="text-gray-400">Aucun</span>
+                    ) : (
+                      <div className="flex flex-wrap gap-1">
+                        {r.salaries.map((sid) => {
+                          const sal = salaries.find((s) => s.id === sid);
+                          return sal ? (
+                            <span key={sid} className="inline-flex items-center bg-brand-lightblue text-brand-dark rounded-full px-3 py-0.5 text-xs font-semibold border border-brand-blue">
+                              {sal.prenom} {sal.nom}
+                            </span>
+                          ) : null;
+                        })}
+                      </div>
+                    )}
+                  </td>
                   <td className="px-4 py-2">
                     <Button
                       variant="ghost"
@@ -328,7 +361,7 @@ function Admin() {
               <FilePlus2 className="text-brand-blue" size={28} />
               <DialogTitle className="text-2xl text-brand-blue">Nouvelle référence</DialogTitle>
             </div>
-            <p className="text-sm text-brand-dark/70 mb-2">Renseignez les détails du projet de référence.</p>
+            <p className="text-sm text-brand-dark/70 mb-2">Renseignez les détails du projet de référence et associez les salariés concernés.</p>
           </DialogHeader>
           <form
             onSubmit={e => {
@@ -364,6 +397,30 @@ function Admin() {
               <div>
                 <Label>Montant (€) <span className="text-red-500">*</span></Label>
                 <Input required type="number" min={0} value={referenceForm.montant} onChange={e => setReferenceForm(f => ({ ...f, montant: Number(e.target.value) }))} />
+              </div>
+            </div>
+            <div>
+              <Label>Salariés associés</Label>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {salaries.length === 0 && (
+                  <span className="text-gray-400 text-sm">Aucun salarié disponible</span>
+                )}
+                {salaries.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    className={`flex items-center gap-1 px-3 py-1 rounded-full border-2 text-sm font-medium transition
+                      ${referenceForm.salaries.includes(s.id)
+                        ? "bg-brand-blue text-white border-brand-blue shadow"
+                        : "bg-white text-brand-dark border-brand-dark hover:bg-brand-pale"}
+                    `}
+                    onClick={() => handleToggleSalarieForReference(s.id)}
+                    aria-pressed={referenceForm.salaries.includes(s.id)}
+                  >
+                    <Users size={14} className="mr-1" />
+                    {s.prenom} {s.nom}
+                  </button>
+                ))}
               </div>
             </div>
             <div>
