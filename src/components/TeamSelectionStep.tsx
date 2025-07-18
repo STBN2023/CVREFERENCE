@@ -4,6 +4,8 @@ import { EmployeeCard, Employee } from "./EmployeeCard";
 import { TeamCounter } from "./TeamCounter";
 import { Button } from "@/components/ui/button";
 import { showSuccess } from "@/utils/toast";
+import { useNavigate } from "react-router-dom";
+import { useWorkflow } from "./WorkflowContext";
 
 const AGENCIES = ["Paris", "Lyon", "Marseille"];
 const FUNCTIONS = ["Développeur", "Designer", "Chef de projet"];
@@ -23,6 +25,8 @@ export const TeamSelectionStep = () => {
   const [selectedFunctions, setSelectedFunctions] = useState<string[]>([]);
   const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const navigate = useNavigate();
+  const { setSelectedTeam } = useWorkflow();
 
   const filteredEmployees = useMemo(() => {
     return EMPLOYEES.filter((e) =>
@@ -46,8 +50,11 @@ export const TeamSelectionStep = () => {
   };
 
   const handleValidate = () => {
+    setSelectedTeam(selectedIds);
     showSuccess("Équipe validée !");
-    // Suite du workflow ici
+    setTimeout(() => {
+      navigate("/references");
+    }, 600);
   };
 
   return (
