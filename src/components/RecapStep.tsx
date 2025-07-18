@@ -2,6 +2,7 @@ import { useWorkflow } from "./WorkflowContext";
 import { EMPLOYEES } from "./TeamSelectionStep";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { showSuccess } from "@/utils/toast";
 
 const MOCK_REFERENCES = [
   {
@@ -53,6 +54,13 @@ export const RecapStep = () => {
   const team = EMPLOYEES.filter((e) => selectedTeam.includes(e.id));
   const references = MOCK_REFERENCES.filter((r) => selectedReferences.includes(r.id));
 
+  const handleFinish = () => {
+    showSuccess("CV généré avec succès ! Merci pour votre sélection.");
+    setTimeout(() => {
+      navigate("/");
+    }, 1000);
+  };
+
   return (
     <div className="max-w-5xl mx-auto py-10 px-2">
       <h2 className="text-4xl font-extrabold mb-10 text-center text-brand-dark tracking-tight drop-shadow-sm">
@@ -97,10 +105,7 @@ export const RecapStep = () => {
       <div className="flex justify-end mt-8">
         <Button
           className="rounded-full px-8 py-2 text-base font-bold bg-brand-yellow text-brand-dark shadow-lg hover:bg-brand-yellow/90 transition"
-          onClick={() => {
-            // TODO: Génération du CV ou export
-            navigate("/");
-          }}
+          onClick={handleFinish}
         >
           Générer le CV / Terminer
         </Button>
