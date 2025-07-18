@@ -10,6 +10,7 @@ import ReferenceSelection from "./pages/ReferenceSelection";
 import Recap from "./pages/Recap";
 import Admin from "./pages/Admin";
 import { BurgerMenu } from "@/components/BurgerMenu";
+import ReferenceAssociation from "./pages/ReferenceAssociation";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/" element={<Home />} />
           <Route path="/team" element={<TeamPage />} />
           <Route path="/references" element={<ReferenceSelection />} />
+          <Route path="/association" element={<ReferenceAssociation />} />
           <Route path="/recap" element={<Recap />} />
           <Route path="/admin" element={<Admin />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
