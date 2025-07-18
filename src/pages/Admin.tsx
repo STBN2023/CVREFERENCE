@@ -4,6 +4,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogC
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { showSuccess } from "@/utils/toast";
+import { Trash2 } from "lucide-react";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 
 type Salarie = {
   id: string;
@@ -57,6 +59,10 @@ function Admin() {
     description_projet: "",
   });
 
+  // Suppression dialogs
+  const [deleteSalarieId, setDeleteSalarieId] = useState<string | null>(null);
+  const [deleteReferenceId, setDeleteReferenceId] = useState<string | null>(null);
+
   // Handlers
   const handleAddSalarie = () => {
     setSalaries((prev) => [
@@ -93,6 +99,22 @@ function Admin() {
     showSuccess("Référence ajoutée !");
   };
 
+  const handleDeleteSalarie = () => {
+    if (deleteSalarieId) {
+      setSalaries((prev) => prev.filter((s) => s.id !== deleteSalarieId));
+      setDeleteSalarieId(null);
+      showSuccess("Salarié supprimé !");
+    }
+  };
+
+  const handleDeleteReference = () => {
+    if (deleteReferenceId) {
+      setReferences((prev) => prev.filter((r) => r.id !== deleteReferenceId));
+      setDeleteReferenceId(null);
+      showSuccess("Référence supprimée !");
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto py-10 px-2">
       <h1 className="text-3xl font-bold mb-8 text-brand-dark">Administration</h1>
@@ -114,12 +136,13 @@ function Admin() {
                 <th className="px-4 py-2 text-left">Fonction</th>
                 <th className="px-4 py-2 text-left">Niveau</th>
                 <th className="px-4 py-2 text-left">Actif</th>
+                <th className="px-4 py-2 text-left"></th>
               </tr>
             </thead>
             <tbody>
               {salaries.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="text-center py-6 text-gray-400">Aucun salarié</td>
+                  <td colSpan={7} className="text-center py-6 text-gray-400">Aucun salarié</td>
                 </tr>
               )}
               {salaries.map((s) => (
@@ -130,6 +153,16 @@ function Admin() {
                   <td className="px-4 py-2">{s.fonction}</td>
                   <td className="px-4 py-2">{s.niveau}</td>
                   <td className="px-4 py-2">{s.actif ? "Oui" : "Non"}</td>
+                  <td className="px-4 py-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Supprimer"
+                      onClick={() => setDeleteSalarieId(s.id)}
+                    >
+                      <Trash2 className="text-red-500" size={18} />
+                    </Button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -154,12 +187,13 @@ function Admin() {
                 <th className="px-4 py-2 text-left">Année</th>
                 <th className="px-4 py-2 text-left">Type</th>
                 <th className="px-4 py-2 text-left">Montant</th>
+                <th className="px-4 py-2 text-left"></th>
               </tr>
             </thead>
             <tbody>
               {references.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="text-center py-6 text-gray-400">Aucune référence</td>
+                  <td colSpan={7} className="text-center py-6 text-gray-400">Aucune référence</td>
                 </tr>
               )}
               {references.map((r) => (
@@ -170,6 +204,16 @@ function Admin() {
                   <td className="px-4 py-2">{r.annee}</td>
                   <td className="px-4 py-2">{r.type_mission}</td>
                   <td className="px-4 py-2">{r.montant.toLocaleString()} €</td>
+                  <td className="px-4 py-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Supprimer"
+                      onClick={() => setDeleteReferenceId(r.id)}
+                    >
+                      <Trash2 className="text-red-500" size={18} />
+                    </Button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -287,6 +331,39 @@ function Admin() {
           </form>
         </DialogContent>
       </Dialog>
+      {/* Suppression dialogs */}
+      <AlertDialog open={!!deleteSalarieId} onOpenChange={open => !open && setDeleteSalarieId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer ce salarié ?</AlertDialogTitle>
+          </AlertDialogHeader>
+          <div>Cette action est irréversible.</div>
+          <AlertDialogFooter>
+            <AlertDialogCancel asChild>
+              <Button variant="outline">Annuler</Button>
+            </AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Button variant="destructive" onClick={handleDeleteSalarie}>Supprimer</Button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={!!deleteReferenceId} onOpenChange={open => !open && setDeleteReferenceId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer cette référence ?</AlertDialogTitle>
+          </AlertDialogHeader>
+          <div>Cette action est irréversible.</div>
+          <AlertDialogFooter>
+            <AlertDialogCancel asChild>
+              <Button variant="outline">Annuler</Button>
+            </AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Button variant="destructive" onClick={handleDeleteReference}>Supprimer</Button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
