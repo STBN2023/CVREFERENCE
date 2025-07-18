@@ -28,18 +28,18 @@ function randomThemeVars() {
   };
 }
 
-// Couleurs de la charte graphique d'origine
+// Couleurs de la charte graphique d'origine (hex exacts)
 const ORIGINAL_THEME: Record<string, string> = {
-  "--background": "0 0% 100%",
-  "--foreground": "222.2 84% 4.9%",
-  "--primary": "222.2 47.4% 11.2%",
-  "--primary-foreground": "210 40% 98%",
-  "--secondary": "210 40% 96.1%",
-  "--secondary-foreground": "222.2 47.4% 11.2%",
-  "--accent": "210 40% 96.1%",
-  "--accent-foreground": "222.2 47.4% 11.2%",
-  "--muted": "210 40% 96.1%",
-  "--muted-foreground": "215.4 16.3% 46.9%",
+  "--background": "#ffffff",
+  "--foreground": "#1D1E3D",
+  "--primary": "#1D1E3D",
+  "--primary-foreground": "#ffffff",
+  "--secondary": "#EBC14A",
+  "--secondary-foreground": "#1D1E3D",
+  "--accent": "#266EB1",
+  "--accent-foreground": "#ffffff",
+  "--muted": "#FCE7B3",
+  "--muted-foreground": "#1D1E3D",
   "--brand-dark": "#1D1E3D",
   "--brand-yellow": "#EBC14A",
   "--brand-pale": "#FCE7B3",
@@ -51,7 +51,6 @@ export const RainbowThemeButton = () => {
   const [spinning, setSpinning] = useState(false);
   const clickTimeout = useRef<number | null>(null);
 
-  // Applique un jeu de variables CSS
   const applyTheme = (vars: Record<string, string>) => {
     const root = document.documentElement;
     Object.entries(vars).forEach(([key, value]) => {
@@ -59,21 +58,18 @@ export const RainbowThemeButton = () => {
     });
   };
 
-  // Simple clic = thème aléatoire
   const handleClick = () => {
     setSpinning(true);
     applyTheme(randomThemeVars());
     setTimeout(() => setSpinning(false), 600);
   };
 
-  // Double clic = retour à la charte graphique
   const handleDoubleClick = () => {
     setSpinning(true);
     applyTheme(ORIGINAL_THEME);
     setTimeout(() => setSpinning(false), 600);
   };
 
-  // Gestion du double clic natif
   return (
     <Button
       onClick={handleClick}
