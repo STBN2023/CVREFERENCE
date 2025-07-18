@@ -33,10 +33,50 @@ const FONCTIONS = ["Architecte", "Ingénieur", "Chargé d'affaires", "Chef de pr
 const NIVEAUX = ["Junior", "Confirmé", "Senior", "Expert"];
 const TYPES_MISSION = ["Construction", "Rénovation", "Extension", "Audit", "Conseil"];
 
+// Données de test
+const MOCK_SALARIES: Salarie[] = [
+  { id: "1", nom: "Martin", prenom: "Alice", agence: "Paris", fonction: "Ingénieur", niveau: "Senior", actif: true },
+  { id: "2", nom: "Dubois", prenom: "Benoit", agence: "Lyon", fonction: "Architecte", niveau: "Confirmé", actif: true },
+  { id: "3", nom: "Leroy", prenom: "Claire", agence: "Marseille", fonction: "Chef de projet", niveau: "Senior", actif: false },
+];
+
+const MOCK_REFERENCES: Reference[] = [
+  {
+    id: "1",
+    nom_projet: "Tour Majunga",
+    ville: "Paris",
+    annee: 2021,
+    type_mission: "Construction",
+    montant: 12000000,
+    client: "Société Générale",
+    description_projet: "Construction d'une tour de bureaux de 45 étages.",
+  },
+  {
+    id: "2",
+    nom_projet: "Hôpital Sud",
+    ville: "Lyon",
+    annee: 2019,
+    type_mission: "Rénovation",
+    montant: 8000000,
+    client: "CHU Lyon",
+    description_projet: "Rénovation complète du pôle maternité.",
+  },
+  {
+    id: "3",
+    nom_projet: "Campus Innovation",
+    ville: "Toulouse",
+    annee: 2022,
+    type_mission: "Extension",
+    montant: 5000000,
+    client: "Université Toulouse",
+    description_projet: "Extension du campus universitaire avec laboratoires.",
+  },
+];
+
 function Admin() {
   // Mock data (in-memory)
-  const [salaries, setSalaries] = useState<Salarie[]>([]);
-  const [references, setReferences] = useState<Reference[]>([]);
+  const [salaries, setSalaries] = useState<Salarie[]>(MOCK_SALARIES);
+  const [references, setReferences] = useState<Reference[]>(MOCK_REFERENCES);
   // Dialogs
   const [openSalarie, setOpenSalarie] = useState(false);
   const [openReference, setOpenReference] = useState(false);
