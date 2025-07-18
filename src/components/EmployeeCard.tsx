@@ -27,10 +27,15 @@ export const EmployeeCard = ({ employee, selected, onSelect }: EmployeeCardProps
     }
   };
 
+  // Définition des couleurs de badge selon la charte
+  const agencyBadgeClass = "bg-brand-lightblue text-brand-dark border-none";
+  const functionBadgeClass = "border-brand-blue text-brand-blue bg-white";
+  const levelBadgeClass = "bg-brand-yellow text-brand-dark border-none";
+
   return (
     <Card
       className={cn(
-        "relative flex flex-col items-center p-5 cursor-pointer border-2 rounded-2xl shadow transition-all duration-200 outline-none focus:ring-2 focus:ring-brand-yellow",
+        "relative flex flex-col items-center p-5 cursor-pointer border-2 rounded-2xl shadow transition-all duration-200 outline-none focus:ring-4 focus:ring-brand-yellow/60",
         selected
           ? "border-brand-yellow bg-brand-pale scale-105 shadow-lg"
           : "border-brand-dark hover:border-brand-yellow bg-white"
@@ -47,7 +52,7 @@ export const EmployeeCard = ({ employee, selected, onSelect }: EmployeeCardProps
           <img
             src={employee.avatarUrl}
             alt={employee.name}
-            className="w-16 h-16 rounded-full object-cover border-2 border-brand-dark"
+            className="w-16 h-16 rounded-full object-cover border-2 border-brand-dark bg-brand-lightblue"
           />
         ) : (
           <div className="w-16 h-16 rounded-full bg-brand-lightblue flex items-center justify-center border-2 border-brand-dark">
@@ -64,9 +69,9 @@ export const EmployeeCard = ({ employee, selected, onSelect }: EmployeeCardProps
       </div>
       <div className="font-semibold text-lg mb-1 text-brand-dark">{employee.name}</div>
       <div className="flex flex-wrap gap-1 justify-center">
-        <Badge variant="secondary" className="rounded-full px-3 py-0.5 bg-brand-lightblue text-brand-dark border-none">{employee.agency}</Badge>
-        <Badge variant="outline" className="rounded-full px-3 py-0.5 border-brand-blue text-brand-blue">{employee.function}</Badge>
-        <Badge variant="default" className="rounded-full px-3 py-0.5 bg-brand-yellow text-brand-dark border-none">{employee.level}</Badge>
+        <Badge variant="secondary" className={`rounded-full px-3 py-0.5 ${agencyBadgeClass}`}>{employee.agency}</Badge>
+        <Badge variant="outline" className={`rounded-full px-3 py-0.5 ${functionBadgeClass}`}>{employee.function}</Badge>
+        <Badge variant="default" className={`rounded-full px-3 py-0.5 ${levelBadgeClass}`}>{employee.level}</Badge>
       </div>
     </Card>
   );
