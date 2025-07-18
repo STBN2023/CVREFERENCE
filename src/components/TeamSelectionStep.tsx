@@ -16,7 +16,6 @@ const EMPLOYEES: Employee[] = [
   { id: "4", name: "David Morel", agency: "Paris", function: "Développeur", level: "Junior" },
   { id: "5", name: "Emma Bernard", agency: "Lyon", function: "Développeur", level: "Confirmé" },
   { id: "6", name: "Fabrice Petit", agency: "Marseille", function: "Designer", level: "Junior" },
-  // Ajoute d'autres exemples si besoin
 ];
 
 export const TeamSelectionStep = () => {
@@ -48,33 +47,39 @@ export const TeamSelectionStep = () => {
 
   const handleValidate = () => {
     showSuccess("Équipe validée !");
-    // Ici tu pourrais déclencher la suite du workflow
+    // Suite du workflow ici
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-8">
-      <h2 className="text-2xl font-bold mb-6 text-center">Constituer l’équipe</h2>
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <FilterChips
-          options={AGENCIES}
-          selected={selectedAgencies}
-          onChange={setSelectedAgencies}
-          label="Agence"
-        />
-        <FilterChips
-          options={FUNCTIONS}
-          selected={selectedFunctions}
-          onChange={setSelectedFunctions}
-          label="Fonction"
-        />
-        <FilterChips
-          options={LEVELS}
-          selected={selectedLevels}
-          onChange={setSelectedLevels}
-          label="Niveau"
-        />
+    <div className="max-w-5xl mx-auto py-10 px-2">
+      <h2 className="text-3xl font-bold mb-8 text-center text-gray-900">Constituer l’équipe</h2>
+      <div className="mb-8 flex flex-col md:flex-row md:items-end md:justify-center gap-6">
+        <div className="flex-1">
+          <FilterChips
+            options={AGENCIES}
+            selected={selectedAgencies}
+            onChange={setSelectedAgencies}
+            label="Agence"
+          />
+        </div>
+        <div className="flex-1">
+          <FilterChips
+            options={FUNCTIONS}
+            selected={selectedFunctions}
+            onChange={setSelectedFunctions}
+            label="Fonction"
+          />
+        </div>
+        <div className="flex-1">
+          <FilterChips
+            options={LEVELS}
+            selected={selectedLevels}
+            onChange={setSelectedLevels}
+            label="Niveau"
+          />
+        </div>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-10">
         {filteredEmployees.map((employee) => (
           <EmployeeCard
             key={employee.id}
@@ -84,16 +89,24 @@ export const TeamSelectionStep = () => {
           />
         ))}
         {filteredEmployees.length === 0 && (
-          <div className="col-span-full text-center text-gray-500 py-8">
+          <div className="col-span-full text-center text-gray-500 py-8 text-lg font-medium">
             Aucun salarié ne correspond aux filtres.
           </div>
         )}
       </div>
-      <div className="flex justify-between items-center gap-4">
-        <Button variant="outline" onClick={handleReset}>
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-4">
+        <Button
+          variant="outline"
+          onClick={handleReset}
+          className="rounded-full px-6 py-2 text-base font-semibold"
+        >
           Réinitialiser
         </Button>
-        <Button onClick={handleValidate} disabled={selectedIds.length === 0}>
+        <Button
+          onClick={handleValidate}
+          disabled={selectedIds.length === 0}
+          className="rounded-full px-6 py-2 text-base font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
+        >
           Valider l’équipe et continuer
         </Button>
       </div>

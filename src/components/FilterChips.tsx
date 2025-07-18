@@ -17,16 +17,20 @@ export const FilterChips = ({ options, selected, onChange, label }: FilterChipsP
   };
 
   return (
-    <div className="mb-2">
-      {label && <div className="mb-1 text-sm font-medium">{label}</div>}
+    <div>
+      {label && <div className="mb-2 text-sm font-semibold text-gray-700">{label}</div>}
       <div className="flex flex-wrap gap-2">
         {options.map((option) => (
           <Button
             key={option}
             variant={selected.includes(option) ? "default" : "outline"}
-            className="rounded-full px-4 py-1 text-sm"
+            className={`rounded-full px-5 py-1.5 text-sm font-medium transition
+              ${selected.includes(option) ? "bg-blue-600 text-white border-blue-600" : ""}
+            `}
             onClick={() => toggle(option)}
             type="button"
+            aria-pressed={selected.includes(option)}
+            tabIndex={0}
           >
             {option}
           </Button>
