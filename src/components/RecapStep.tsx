@@ -2,6 +2,7 @@ import { useWorkflow } from "./WorkflowContext";
 import { EMPLOYEES } from "./TeamSelectionStep";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 import { showSuccess } from "@/utils/toast";
 
 const MOCK_REFERENCES = [
@@ -48,8 +49,20 @@ const MOCK_REFERENCES = [
 ];
 
 export const RecapStep = () => {
-  const { selectedTeam, selectedReferences } = useWorkflow();
+  const {
+    selectedTeam,
+    setSelectedTeam,
+    selectedReferences,
+    setSelectedReferences,
+  } = useWorkflow();
   const navigate = useNavigate();
+
+  // Redirige si aucune sélection
+  useEffect(() => {
+    if (selectedTeam.length === 0 || selectedReferences.length === 0) {
+      navigate("/");
+    }
+  }, [selectedTeam, selectedReferences, navigate]);
 
   const team = EMPLOYEES.filter((e) => selectedTeam.includes(e.id));
   const references = MOCK_REFERENCES.filter((r) => selectedReferences.includes(r.id));
@@ -57,6 +70,8 @@ export const RecapStep = () => {
   const handleFinish = () => {
     showSuccess("CV généré avec succès ! Merci pour votre sélection.");
     setTimeout(() => {
+      setSelectedTeam([]);
+      setSelectedReferences([]);
       navigate("/");
     }, 1000);
   };
