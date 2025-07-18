@@ -52,8 +52,10 @@ export const TeamSelectionStep = () => {
 
   return (
     <div className="max-w-5xl mx-auto py-10 px-2">
-      <h2 className="text-3xl font-bold mb-8 text-center text-gray-900">Constituer l’équipe</h2>
-      <div className="mb-8 flex flex-col md:flex-row md:items-end md:justify-center gap-6">
+      <h2 className="text-4xl font-extrabold mb-10 text-center text-brand-dark tracking-tight drop-shadow-sm">
+        Constituer l’équipe
+      </h2>
+      <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-center md:gap-8">
         <div className="flex-1">
           <FilterChips
             options={AGENCIES}
@@ -79,7 +81,7 @@ export const TeamSelectionStep = () => {
           />
         </div>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-10">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 mb-12">
         {filteredEmployees.map((employee) => (
           <EmployeeCard
             key={employee.id}
@@ -89,7 +91,7 @@ export const TeamSelectionStep = () => {
           />
         ))}
         {filteredEmployees.length === 0 && (
-          <div className="col-span-full text-center text-gray-500 py-8 text-lg font-medium">
+          <div className="col-span-full text-center text-brand-dark/60 py-8 text-lg font-medium">
             Aucun salarié ne correspond aux filtres.
           </div>
         )}
@@ -98,14 +100,14 @@ export const TeamSelectionStep = () => {
         <Button
           variant="outline"
           onClick={handleReset}
-          className="rounded-full px-6 py-2 text-base font-semibold"
+          className="rounded-full px-8 py-2 text-base font-semibold border-2 border-brand-dark text-brand-dark bg-white hover:bg-brand-pale transition"
         >
           Réinitialiser
         </Button>
         <Button
           onClick={handleValidate}
           disabled={selectedIds.length === 0}
-          className="rounded-full px-6 py-2 text-base font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
+          className="rounded-full px-8 py-2 text-base font-bold bg-brand-yellow text-brand-dark shadow-lg hover:bg-brand-yellow/90 disabled:opacity-60 transition"
         >
           Valider l’équipe et continuer
         </Button>
