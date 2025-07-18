@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogC
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { showSuccess } from "@/utils/toast";
-import { Trash2 } from "lucide-react";
+import { Trash2, UserPlus, FilePlus2 } from "lucide-react";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 
 type Salarie = {
@@ -162,8 +162,8 @@ function Admin() {
       <section className="mb-12">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-brand-blue">Salariés</h2>
-          <Button onClick={() => setOpenSalarie(true)} className="bg-brand-yellow text-brand-dark font-bold">
-            Ajouter un salarié
+          <Button onClick={() => setOpenSalarie(true)} className="bg-brand-yellow text-brand-dark font-bold flex items-center gap-2">
+            <UserPlus size={18} /> Ajouter un salarié
           </Button>
         </div>
         <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
@@ -213,8 +213,8 @@ function Admin() {
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-brand-blue">Références</h2>
-          <Button onClick={() => setOpenReference(true)} className="bg-brand-yellow text-brand-dark font-bold">
-            Ajouter une référence
+          <Button onClick={() => setOpenReference(true)} className="bg-brand-yellow text-brand-dark font-bold flex items-center gap-2">
+            <FilePlus2 size={18} /> Ajouter une référence
           </Button>
         </div>
         <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
@@ -260,112 +260,120 @@ function Admin() {
           </table>
         </div>
       </section>
-      {/* Dialogs */}
+      {/* Dialogs améliorés */}
       <Dialog open={openSalarie} onOpenChange={setOpenSalarie}>
-        <DialogContent>
+        <DialogContent className="max-w-lg bg-brand-pale border-2 border-brand-yellow rounded-2xl shadow-2xl">
           <DialogHeader>
-            <DialogTitle>Ajouter un salarié</DialogTitle>
+            <div className="flex items-center gap-3 mb-2">
+              <UserPlus className="text-brand-blue" size={28} />
+              <DialogTitle className="text-2xl text-brand-blue">Nouveau salarié</DialogTitle>
+            </div>
+            <p className="text-sm text-brand-dark/70 mb-2">Remplissez les informations du salarié à ajouter.</p>
           </DialogHeader>
           <form
             onSubmit={e => {
               e.preventDefault();
               handleAddSalarie();
             }}
-            className="space-y-3"
+            className="space-y-4"
           >
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Label>Nom*</Label>
-                <Input required value={salarieForm.nom} onChange={e => setSalarieForm(f => ({ ...f, nom: e.target.value }))} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <Label>Nom <span className="text-red-500">*</span></Label>
+                <Input required value={salarieForm.nom} onChange={e => setSalarieForm(f => ({ ...f, nom: e.target.value }))} autoFocus />
               </div>
-              <div className="flex-1">
-                <Label>Prénom*</Label>
+              <div>
+                <Label>Prénom <span className="text-red-500">*</span></Label>
                 <Input required value={salarieForm.prenom} onChange={e => setSalarieForm(f => ({ ...f, prenom: e.target.value }))} />
               </div>
-            </div>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Label>Agence*</Label>
-                <select required className="w-full border rounded px-2 py-1" value={salarieForm.agence} onChange={e => setSalarieForm(f => ({ ...f, agence: e.target.value }))}>
+              <div>
+                <Label>Agence <span className="text-red-500">*</span></Label>
+                <select required className="w-full border rounded px-2 py-2 bg-white" value={salarieForm.agence} onChange={e => setSalarieForm(f => ({ ...f, agence: e.target.value }))}>
                   <option value="">Sélectionner</option>
                   {AGENCES.map(a => <option key={a} value={a}>{a}</option>)}
                 </select>
               </div>
-              <div className="flex-1">
-                <Label>Fonction*</Label>
-                <select required className="w-full border rounded px-2 py-1" value={salarieForm.fonction} onChange={e => setSalarieForm(f => ({ ...f, fonction: e.target.value }))}>
+              <div>
+                <Label>Fonction <span className="text-red-500">*</span></Label>
+                <select required className="w-full border rounded px-2 py-2 bg-white" value={salarieForm.fonction} onChange={e => setSalarieForm(f => ({ ...f, fonction: e.target.value }))}>
                   <option value="">Sélectionner</option>
                   {FONCTIONS.map(f => <option key={f} value={f}>{f}</option>)}
                 </select>
               </div>
-            </div>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Label>Niveau*</Label>
-                <select required className="w-full border rounded px-2 py-1" value={salarieForm.niveau} onChange={e => setSalarieForm(f => ({ ...f, niveau: e.target.value }))}>
+              <div>
+                <Label>Niveau <span className="text-red-500">*</span></Label>
+                <select required className="w-full border rounded px-2 py-2 bg-white" value={salarieForm.niveau} onChange={e => setSalarieForm(f => ({ ...f, niveau: e.target.value }))}>
                   <option value="">Sélectionner</option>
                   {NIVEAUX.map(n => <option key={n} value={n}>{n}</option>)}
                 </select>
               </div>
-              <div className="flex-1 flex items-center gap-2 mt-6">
+              <div className="flex items-center gap-2 mt-6">
                 <input type="checkbox" checked={salarieForm.actif} onChange={e => setSalarieForm(f => ({ ...f, actif: e.target.checked }))} id="actif" />
-                <Label htmlFor="actif">Actif</Label>
+                <Label htmlFor="actif" className="mb-0">Actif</Label>
               </div>
             </div>
-            <DialogFooter>
-              <Button type="submit" className="bg-brand-yellow text-brand-dark font-bold">Enregistrer</Button>
+            <DialogFooter className="mt-2 flex gap-2">
+              <Button type="submit" className="bg-brand-blue text-white font-bold rounded-full px-6 py-2">Enregistrer</Button>
               <DialogClose asChild>
-                <Button type="button" variant="outline">Annuler</Button>
+                <Button type="button" variant="outline" className="rounded-full px-6 py-2">Annuler</Button>
               </DialogClose>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
       <Dialog open={openReference} onOpenChange={setOpenReference}>
-        <DialogContent>
+        <DialogContent className="max-w-lg bg-brand-pale border-2 border-brand-yellow rounded-2xl shadow-2xl">
           <DialogHeader>
-            <DialogTitle>Ajouter une référence</DialogTitle>
+            <div className="flex items-center gap-3 mb-2">
+              <FilePlus2 className="text-brand-blue" size={28} />
+              <DialogTitle className="text-2xl text-brand-blue">Nouvelle référence</DialogTitle>
+            </div>
+            <p className="text-sm text-brand-dark/70 mb-2">Renseignez les détails du projet de référence.</p>
           </DialogHeader>
           <form
             onSubmit={e => {
               e.preventDefault();
               handleAddReference();
             }}
-            className="space-y-3"
+            className="space-y-4"
           >
-            <Label>Nom du projet*</Label>
-            <Input required value={referenceForm.nom_projet} onChange={e => setReferenceForm(f => ({ ...f, nom_projet: e.target.value }))} />
-            <Label>Client*</Label>
-            <Input required value={referenceForm.client} onChange={e => setReferenceForm(f => ({ ...f, client: e.target.value }))} />
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Label>Ville*</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <Label>Nom du projet <span className="text-red-500">*</span></Label>
+                <Input required value={referenceForm.nom_projet} onChange={e => setReferenceForm(f => ({ ...f, nom_projet: e.target.value }))} autoFocus />
+              </div>
+              <div>
+                <Label>Client <span className="text-red-500">*</span></Label>
+                <Input required value={referenceForm.client} onChange={e => setReferenceForm(f => ({ ...f, client: e.target.value }))} />
+              </div>
+              <div>
+                <Label>Ville <span className="text-red-500">*</span></Label>
                 <Input required value={referenceForm.ville} onChange={e => setReferenceForm(f => ({ ...f, ville: e.target.value }))} />
               </div>
-              <div className="flex-1">
-                <Label>Année*</Label>
+              <div>
+                <Label>Année <span className="text-red-500">*</span></Label>
                 <Input required type="number" min={1900} max={2100} value={referenceForm.annee} onChange={e => setReferenceForm(f => ({ ...f, annee: Number(e.target.value) }))} />
               </div>
-            </div>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Label>Type de mission*</Label>
-                <select required className="w-full border rounded px-2 py-1" value={referenceForm.type_mission} onChange={e => setReferenceForm(f => ({ ...f, type_mission: e.target.value }))}>
+              <div>
+                <Label>Type de mission <span className="text-red-500">*</span></Label>
+                <select required className="w-full border rounded px-2 py-2 bg-white" value={referenceForm.type_mission} onChange={e => setReferenceForm(f => ({ ...f, type_mission: e.target.value }))}>
                   <option value="">Sélectionner</option>
                   {TYPES_MISSION.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
-              <div className="flex-1">
-                <Label>Montant (€)*</Label>
+              <div>
+                <Label>Montant (€) <span className="text-red-500">*</span></Label>
                 <Input required type="number" min={0} value={referenceForm.montant} onChange={e => setReferenceForm(f => ({ ...f, montant: Number(e.target.value) }))} />
               </div>
             </div>
-            <Label>Description*</Label>
-            <textarea required className="w-full border rounded px-2 py-1" value={referenceForm.description_projet} onChange={e => setReferenceForm(f => ({ ...f, description_projet: e.target.value }))} />
-            <DialogFooter>
-              <Button type="submit" className="bg-brand-yellow text-brand-dark font-bold">Enregistrer</Button>
+            <div>
+              <Label>Description <span className="text-red-500">*</span></Label>
+              <textarea required className="w-full border rounded px-2 py-2 min-h-[60px] bg-white" value={referenceForm.description_projet} onChange={e => setReferenceForm(f => ({ ...f, description_projet: e.target.value }))} />
+            </div>
+            <DialogFooter className="mt-2 flex gap-2">
+              <Button type="submit" className="bg-brand-blue text-white font-bold rounded-full px-6 py-2">Enregistrer</Button>
               <DialogClose asChild>
-                <Button type="button" variant="outline">Annuler</Button>
+                <Button type="button" variant="outline" className="rounded-full px-6 py-2">Annuler</Button>
               </DialogClose>
             </DialogFooter>
           </form>
