@@ -9,6 +9,7 @@ import NotFound from "./pages/NotFound";
 import ReferenceSelection from "./pages/ReferenceSelection";
 import Recap from "./pages/Recap";
 import Admin from "./pages/Admin";
+import { BurgerMenu } from "@/components/BurgerMenu";
 
 const queryClient = new QueryClient();
 
@@ -18,6 +19,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <BurgerMenu />
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/team" element={<TeamPage />} />
