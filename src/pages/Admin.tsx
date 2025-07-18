@@ -7,6 +7,12 @@ import { showSuccess } from "@/utils/toast";
 import { Trash2, UserPlus, FilePlus2, Users, Pencil } from "lucide-react";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 
+const CV_TEMPLATES = [
+  { id: "classic", label: "Classique" },
+  { id: "modern", label: "Moderne" },
+  { id: "minimal", label: "Minimal" },
+];
+
 type Salarie = {
   id: string;
   nom: string;
@@ -15,6 +21,7 @@ type Salarie = {
   fonction: string;
   niveau: string;
   actif: boolean;
+  template: string; // Ajout du template
 };
 
 type Reference = {
@@ -35,9 +42,9 @@ const NIVEAUX = ["Junior", "Confirmé", "Senior", "Expert"];
 const TYPES_MISSION = ["Construction", "Rénovation", "Extension", "Audit", "Conseil"];
 
 const MOCK_SALARIES: Salarie[] = [
-  { id: "1", nom: "Martin", prenom: "Alice", agence: "Paris", fonction: "Ingénieur", niveau: "Senior", actif: true },
-  { id: "2", nom: "Dubois", prenom: "Benoit", agence: "Lyon", fonction: "Architecte", niveau: "Confirmé", actif: true },
-  { id: "3", nom: "Leroy", prenom: "Claire", agence: "Marseille", fonction: "Chef de projet", niveau: "Senior", actif: false },
+  { id: "1", nom: "Martin", prenom: "Alice", agence: "Paris", fonction: "Ingénieur", niveau: "Senior", actif: true, template: "classic" },
+  { id: "2", nom: "Dubois", prenom: "Benoit", agence: "Lyon", fonction: "Architecte", niveau: "Confirmé", actif: true, template: "modern" },
+  { id: "3", nom: "Leroy", prenom: "Claire", agence: "Marseille", fonction: "Chef de projet", niveau: "Senior", actif: false, template: "minimal" },
 ];
 
 const MOCK_REFERENCES: Reference[] = [
@@ -92,6 +99,7 @@ function Admin() {
     fonction: "",
     niveau: "",
     actif: true,
+    template: "classic",
   });
   const [referenceForm, setReferenceForm] = useState<Omit<Reference, "id">>({
     nom_projet: "",
@@ -126,6 +134,7 @@ function Admin() {
       fonction: "",
       niveau: "",
       actif: true,
+      template: "classic",
     });
     setEditSalarieId(null);
     showSuccess("Salarié ajouté !");
@@ -147,6 +156,7 @@ function Admin() {
       fonction: "",
       niveau: "",
       actif: true,
+      template: "classic",
     });
     showSuccess("Salarié modifié !");
   };
@@ -228,6 +238,7 @@ function Admin() {
       fonction: s.fonction,
       niveau: s.niveau,
       actif: s.actif,
+      template: s.template,
     });
     setEditSalarieId(s.id);
     setOpenSalarie(true);
@@ -266,6 +277,7 @@ function Admin() {
                 fonction: "",
                 niveau: "",
                 actif: true,
+                template: "classic",
               });
             }}
             className="bg-brand-yellow text-brand-dark font-bold flex items-center gap-2"
@@ -283,13 +295,14 @@ function Admin() {
                 <th className="px-4 py-2 text-left">Fonction</th>
                 <th className="px-4 py-2 text-left">Niveau</th>
                 <th className="px-4 py-2 text-left">Actif</th>
+                <th className="px-4 py-2 text-left">Template CV</th>
                 <th className="px-4 py-2 text-left"></th>
               </tr>
             </thead>
             <tbody>
               {salaries.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center py-6 text-gray-400">Aucun salarié</td>
+                  <td colSpan={8} className="text-center py-6 text-gray-400">Aucun salarié</td>
                 </tr>
               )}
               {salaries.map((s) => (
@@ -300,6 +313,9 @@ function Admin() {
                   <td className="px-4 py-2">{s.fonction}</td>
                   <td className="px-4 py-2">{s.niveau}</td>
                   <td className="px-4 py-2">{s.actif ? "Oui" : "Non"}</td>
+                  <td className="px-4 py-2">
+                    {CV_TEMPLATES.find(t => t.id === s.template)?.label || "Classique"}
+                  </td>
                   <td className="px-4 py-2 flex gap-1">
                     <Button
                       variant="ghost"
@@ -428,6 +444,7 @@ function Admin() {
             fonction: "",
             niveau: "",
             actif: true,
+            template: "classic",
           });
         }
       }}>
@@ -485,6 +502,14 @@ function Admin() {
               <div className="flex items-center gap-2 mt-6">
                 <input type="checkbox" checked={salarieForm.actif} onChange={e => setSalarieForm(f => ({ ...f, actif: e.target.checked }))} id="actif" />
                 <Label htmlFor="actif" className="mb-0">Actif</Label>
+              </div>
+              <div>
+                <Label>Template de CV <span className="text-red-500">*</span></Label>
+                <select required className="w-full border rounded px-2 py-2 bg-white" value={salarieForm.template} onChange={e => setSalarieForm(f => ({ ...f, template: e.target.value }))}>
+                  {CV_TEMPLATES.map(tpl => (
+                    <option key={tpl.id} value={tpl.id}>{tpl.label}</option>
+                  ))}
+                </select>
               </div>
             </div>
             <DialogFooter className="mt-2 flex gap-2">
