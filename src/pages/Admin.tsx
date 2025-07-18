@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { showSuccess } from "@/utils/toast";
-import { Trash2, UserPlus, FilePlus2, Users, Pencil } from "lucide-react";
+import { Trash2, UserPlus, FilePlus2, Users, Pencil, Download } from "lucide-react";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 
 const CV_TEMPLATES = [
@@ -21,7 +21,11 @@ type Salarie = {
   fonction: string;
   niveau: string;
   actif: boolean;
-  template: string; // Ajout du template
+  template: string;
+  cvFile?: {
+    name: string;
+    url: string;
+  };
 };
 
 type Reference = {
@@ -92,7 +96,7 @@ function Admin() {
   const [openReference, setOpenReference] = useState(false);
 
   // Form state
-  const [salarieForm, setSalarieForm] = useState<Omit<Salarie, "id">>({
+  const [salarieForm, setSalarieForm] = useState<Omit<Salarie, "id" | "cvFile">>({
     nom: "",
     prenom: "",
     agence: "",
@@ -101,6 +105,8 @@ function Admin() {
     actif: true,
     template: "classic",
   });
+  const [cvFile, setCvFile] = useState<{ name: string; url: string } | undefined>(undefined);
+
   const [referenceForm, setReferenceForm] = useState<Omit<Reference, "id">>({
     nom_projet: "",
     client: "",
@@ -124,7 +130,7 @@ function Admin() {
   const handleAddSalarie = () => {
     setSalaries((prev) => [
       ...prev,
-      { ...salarieForm, id: Date.now().toString() },
+      { ...salarieForm, id: Date.now().toString(), cvFile },
     ]);
     setOpenSalarie(false);
     setSalarieForm({
@@ -136,6 +142,7 @@ function Admin() {
       actif: true,
       template: "classic",
     });
+    setCvFile(undefined);
     setEditSalarieId(null);
     showSuccess("Salarié ajouté !");
   };
@@ -144,7 +151,7 @@ function Admin() {
     if (!editSalarieId) return;
     setSalaries((prev) =>
       prev.map((s) =>
-        s.id === editSalarieId ? { ...s, ...salarieForm } : s
+        s.id === editSalarieId ? { ...s, ...salarieForm, cvFile } : s
       )
     );
     setOpenSalarie(false);
@@ -158,6 +165,7 @@ function Admin() {
       actif: true,
       template: "classic",
     });
+    setCvFile(undefined);
     showSuccess("Salarié modifié !");
   };
 
@@ -240,6 +248,7 @@ function Admin() {
       actif: s.actif,
       template: s.template,
     });
+    setCvFile(s.cvFile);
     setEditSalarieId(s.id);
     setOpenSalarie(true);
   };
@@ -257,6 +266,17 @@ function Admin() {
     });
     setEditReferenceId(r.id);
     setOpenReference(true);
+  };
+
+  // Gestion de l'upload du fichier PowerPoint
+  const handleCvFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.name.endsWith(".pptx")) {
+      const url = URL.createObjectURL(file);
+      setCvFile({ name: file.name, url });
+    } else {
+      setCvFile(undefined);
+    }
   };
 
   return (
@@ -279,6 +299,7 @@ function Admin() {
                 actif: true,
                 template: "classic",
               });
+              setCvFile(undefined);
             }}
             className="bg-brand-yellow text-brand-dark font-bold flex items-center gap-2"
           >
@@ -296,13 +317,14 @@ function Admin() {
                 <th className="px-4 py-2 text-left">Niveau</th>
                 <th className="px-4 py-2 text-left">Actif</th>
                 <th className="px-4 py-2 text-left">Template CV</th>
+                <th className="px-4 py-2 text-left">CV PowerPoint</th>
                 <th className="px-4 py-2 text-left"></th>
               </tr>
             </thead>
             <tbody>
               {salaries.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="text-center py-6 text-gray-400">Aucun salarié</td>
+                  <td colSpan={9} className="text-center py-6 text-gray-400">Aucun salarié</td>
                 </tr>
               )}
               {salaries.map((s) => (
@@ -315,6 +337,20 @@ function Admin() {
                   <td className="px-4 py-2">{s.actif ? "Oui" : "Non"}</td>
                   <td className="px-4 py-2">
                     {CV_TEMPLATES.find(t => t.id === s.template)?.label || "Classique"}
+                  </td>
+                  <td className="px-4 py-2">
+                    {s.cvFile ? (
+                      <a
+                        href={s.cvFile.url}
+                        download={s.cvFile.name}
+                        className="flex items-center gap-1 text-brand-blue underline"
+                        title="Télécharger le CV"
+                      >
+                        <Download size={16} /> {s.cvFile.name}
+                      </a>
+                    ) : (
+                      <span className="text-gray-400">Aucun</span>
+                    )}
                   </td>
                   <td className="px-4 py-2 flex gap-1">
                     <Button
@@ -446,6 +482,7 @@ function Admin() {
             actif: true,
             template: "classic",
           });
+          setCvFile(undefined);
         }
       }}>
         <DialogContent className="max-w-lg bg-brand-pale border-2 border-brand-yellow rounded-2xl shadow-2xl">
@@ -510,6 +547,34 @@ function Admin() {
                     <option key={tpl.id} value={tpl.id}>{tpl.label}</option>
                   ))}
                 </select>
+              </div>
+              <div>
+                <Label>CV PowerPoint (.pptx)</Label>
+                <Input
+                  type="file"
+                  accept=".pptx"
+                  onChange={handleCvFileChange}
+                />
+                {cvFile && (
+                  <div className="mt-1 flex items-center gap-2">
+                    <a
+                      href={cvFile.url}
+                      download={cvFile.name}
+                      className="text-brand-blue underline flex items-center gap-1"
+                    >
+                      <Download size={16} /> {cvFile.name}
+                    </a>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="px-2 py-0.5"
+                      onClick={() => setCvFile(undefined)}
+                    >
+                      Supprimer
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
             <DialogFooter className="mt-2 flex gap-2">
