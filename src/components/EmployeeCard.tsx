@@ -1,6 +1,8 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, User } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { KeyboardEvent } from "react";
 
 type Employee = {
   id: string;
@@ -18,14 +20,27 @@ type EmployeeCardProps = {
 };
 
 export const EmployeeCard = ({ employee, selected, onSelect }: EmployeeCardProps) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === " " || e.key === "Enter") {
+      e.preventDefault();
+      onSelect(employee.id);
+    }
+  };
+
   return (
     <Card
-      className={`relative flex flex-col items-center p-4 cursor-pointer border-2 transition
-        ${selected ? "border-blue-600 bg-blue-50" : "border-transparent hover:border-blue-300"}
-      `}
+      className={cn(
+        "relative flex flex-col items-center p-4 cursor-pointer border-2 transition-all duration-200 outline-none focus:ring-2 focus:ring-blue-400",
+        selected
+          ? "border-blue-600 bg-blue-50 scale-105 shadow-lg"
+          : "border-transparent hover:border-blue-300"
+      )}
       onClick={() => onSelect(employee.id)}
       tabIndex={0}
       aria-pressed={selected}
+      aria-label={`Sélectionner ${employee.name}`}
+      onKeyDown={handleKeyDown}
+      role="button"
     >
       <div className="relative mb-2">
         {employee.avatarUrl ? (
@@ -40,7 +55,11 @@ export const EmployeeCard = ({ employee, selected, onSelect }: EmployeeCardProps
           </div>
         )}
         {selected && (
-          <CheckCircle2 className="absolute -top-2 -right-2 text-blue-600 bg-white rounded-full" size={22} />
+          <CheckCircle2
+            className="absolute -top-2 -right-2 text-blue-600 bg-white rounded-full animate-bounce"
+            size={22}
+            aria-label="Sélectionné"
+          />
         )}
       </div>
       <div className="font-semibold text-base mb-1">{employee.name}</div>
