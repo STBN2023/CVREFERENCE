@@ -1,7 +1,7 @@
 import { TeamSelectionStep } from "@/components/TeamSelectionStep";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 
-const Index = () => {
+const TeamPage = () => {
   return (
     <div className="min-h-screen bg-[#D9ECFB] flex flex-col">
       <TeamSelectionStep />
@@ -10,4 +10,4 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default TeamPage;
