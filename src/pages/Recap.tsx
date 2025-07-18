@@ -145,3 +145,5 @@ export const RecapStep = () => {
     </div>
   );
 };
+
+export default RecapStep;
