@@ -63,8 +63,8 @@ export const TeamSelectionStep = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto py-10 px-2">
-      <h2 className="text-4xl font-extrabold mb-10 text-center text-brand-dark tracking-tight drop-shadow-sm">
+    <div className="max-w-5xl mx-auto py-10 px-2 bg-[hsl(var(--brand-lightblue))] min-h-screen">
+      <h2 className="text-4xl font-extrabold mb-10 text-center text-[hsl(var(--brand-dark))] tracking-tight drop-shadow-sm">
         Constituer l’équipe
       </h2>
       <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-center md:gap-8">
@@ -103,7 +103,7 @@ export const TeamSelectionStep = () => {
           />
         ))}
         {filteredEmployees.length === 0 && (
-          <div className="col-span-full text-center text-brand-dark/60 py-8 text-lg font-medium">
+          <div className="col-span-full text-center text-[hsl(var(--brand-dark))/0.6] py-8 text-lg font-medium">
             Aucun salarié ne correspond aux filtres.
           </div>
         )}
@@ -112,14 +112,14 @@ export const TeamSelectionStep = () => {
         <Button
           variant="outline"
           onClick={() => setOpenReset(true)}
-          className="rounded-full px-8 py-2 text-base font-semibold border-2 border-brand-dark text-brand-dark bg-white hover:bg-brand-pale transition"
+          className="rounded-full px-8 py-2 text-base font-semibold border-2 border-[hsl(var(--brand-dark))] text-[hsl(var(--brand-dark))] bg-white hover:bg-[hsl(var(--brand-pale))] transition"
         >
           Réinitialiser
         </Button>
         <Button
           onClick={handleValidate}
           disabled={selectedIds.length === 0}
-          className="rounded-full px-8 py-2 text-base font-bold bg-brand-yellow text-brand-dark shadow-lg hover:bg-brand-yellow/90 disabled:opacity-60 transition"
+          className="rounded-full px-8 py-2 text-base font-bold bg-[hsl(var(--brand-yellow))] text-[hsl(var(--brand-dark))] shadow-lg hover:bg-[hsl(var(--brand-yellow))/0.9] disabled:opacity-60 transition"
         >
           Valider l’équipe et continuer
         </Button>

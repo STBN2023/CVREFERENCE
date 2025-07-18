@@ -18,7 +18,7 @@ export const FilterChips = ({ options, selected, onChange, label }: FilterChipsP
 
   return (
     <div>
-      {label && <div className="mb-2 text-sm font-semibold text-brand-dark">{label}</div>}
+      {label && <div className="mb-2 text-sm font-semibold text-[hsl(var(--brand-dark))]">{label}</div>}
       <div className="flex flex-wrap gap-2">
         {options.map((option) => {
           const isSelected = selected.includes(option);
@@ -30,8 +30,8 @@ export const FilterChips = ({ options, selected, onChange, label }: FilterChipsP
                 border-2
                 ${
                   isSelected
-                    ? "bg-brand-yellow text-brand-dark border-brand-yellow shadow focus:ring-2 focus:ring-brand-yellow/60"
-                    : "border-brand-dark text-brand-dark bg-white hover:bg-brand-pale focus:ring-2 focus:ring-brand-blue/40"
+                    ? "bg-[hsl(var(--brand-yellow))] text-[hsl(var(--brand-dark))] border-[hsl(var(--brand-yellow))] shadow focus:ring-2 focus:ring-[hsl(var(--brand-yellow))/0.6]"
+                    : "border-[hsl(var(--brand-dark))] text-[hsl(var(--brand-dark))] bg-white hover:bg-[hsl(var(--brand-pale))] focus:ring-2 focus:ring-[hsl(var(--brand-blue))/0.4]"
                 }
                 focus:outline-none
               `}
