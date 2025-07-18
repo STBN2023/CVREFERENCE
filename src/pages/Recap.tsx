@@ -49,6 +49,13 @@ const MOCK_REFERENCES = [
   },
 ];
 
+// Liste des templates de CV disponibles
+const CV_TEMPLATES = [
+  { id: "classic", label: "Classique" },
+  { id: "modern", label: "Moderne" },
+  { id: "minimal", label: "Minimal" },
+];
+
 export const RecapStep = () => {
   const {
     selectedTeam,
@@ -57,6 +64,8 @@ export const RecapStep = () => {
     setSelectedReferences,
     referenceAssociation,
     setReferenceAssociation,
+    templateAssociation,
+    setTemplateAssociation,
   } = useWorkflow();
   const navigate = useNavigate();
 
@@ -76,12 +85,18 @@ export const RecapStep = () => {
       setSelectedTeam([]);
       setSelectedReferences([]);
       setReferenceAssociation({});
+      setTemplateAssociation({});
       navigate("/");
     }, 1000);
   };
 
   const handleEditAssociation = () => {
     navigate("/association");
+  };
+
+  const getTemplateLabel = (templateId: string) => {
+    const tpl = CV_TEMPLATES.find(t => t.id === templateId);
+    return tpl ? tpl.label : "Classique";
   };
 
   return (
@@ -108,6 +123,7 @@ export const RecapStep = () => {
               <div className="font-semibold text-lg text-brand-dark mb-1">{member.name}</div>
               <div className="text-sm text-brand-dark/80">{member.function} • {member.level}</div>
               <div className="text-xs text-brand-dark/60 mb-2">{member.agency}</div>
+              <div className="text-xs text-brand-dark/60 font-semibold mb-1">Template de CV : <span className="font-bold text-brand-blue">{getTemplateLabel(templateAssociation[member.id])}</span></div>
               <div className="text-xs text-brand-dark/60 font-semibold mb-1">Références associées :</div>
               <ul className="list-disc ml-4">
                 {(referenceAssociation[member.id] || []).map((refId) => {

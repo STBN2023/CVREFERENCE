@@ -48,12 +48,21 @@ const MOCK_REFERENCES = [
   },
 ];
 
+// Liste des templates de CV disponibles
+const CV_TEMPLATES = [
+  { id: "classic", label: "Classique" },
+  { id: "modern", label: "Moderne" },
+  { id: "minimal", label: "Minimal" },
+];
+
 export default function ReferenceAssociation() {
   const {
     selectedTeam,
     selectedReferences,
     referenceAssociation,
     setReferenceAssociation,
+    templateAssociation,
+    setTemplateAssociation,
   } = useWorkflow();
   const navigate = useNavigate();
 
@@ -76,10 +85,28 @@ export default function ReferenceAssociation() {
     // eslint-disable-next-line
   }, []);
 
+  // Initialiser l'association de template si vide
+  useEffect(() => {
+    if (Object.keys(templateAssociation).length === 0) {
+      const initial: Record<string, string> = {};
+      selectedTeam.forEach((empId) => {
+        initial[empId] = CV_TEMPLATES[0].id; // Par défaut "Classique"
+      });
+      setTemplateAssociation(initial);
+    }
+    // eslint-disable-next-line
+  }, []);
+
   const [localAssoc, setLocalAssoc] = useState<Record<string, string[]>>(
     referenceAssociation && Object.keys(referenceAssociation).length > 0
       ? referenceAssociation
       : Object.fromEntries(selectedTeam.map((id) => [id, [...selectedReferences]]))
+  );
+
+  const [localTemplates, setLocalTemplates] = useState<Record<string, string>>(
+    templateAssociation && Object.keys(templateAssociation).length > 0
+      ? templateAssociation
+      : Object.fromEntries(selectedTeam.map((id) => [id, CV_TEMPLATES[0].id]))
   );
 
   const handleToggle = (empId: string, refId: string) => {
@@ -91,8 +118,16 @@ export default function ReferenceAssociation() {
     }));
   };
 
+  const handleTemplateChange = (empId: string, templateId: string) => {
+    setLocalTemplates((prev) => ({
+      ...prev,
+      [empId]: templateId,
+    }));
+  };
+
   const handleValidate = () => {
     setReferenceAssociation(localAssoc);
+    setTemplateAssociation(localTemplates);
     showSuccess("Associations enregistrées !");
     setTimeout(() => {
       navigate("/recap");
@@ -105,13 +140,27 @@ export default function ReferenceAssociation() {
   return (
     <div className="max-w-5xl mx-auto py-10 px-2">
       <h2 className="text-4xl font-extrabold mb-10 text-center text-brand-dark tracking-tight drop-shadow-sm">
-        Associer les références à chaque membre de l’équipe
+        Associer les références et le template de CV à chaque membre de l’équipe
       </h2>
       <div className="flex flex-col gap-8">
         {team.map((emp) => (
           <div key={emp.id} className="bg-white rounded-xl shadow p-6 border-2 border-brand-dark">
             <div className="font-bold text-lg text-brand-blue mb-2">
               {emp.name} <span className="text-sm text-brand-dark/60">({emp.function} • {emp.level})</span>
+            </div>
+            <div className="mb-3">
+              <label className="block text-sm font-semibold text-brand-dark mb-1">
+                Template de CV
+              </label>
+              <select
+                className="w-full max-w-xs border-2 border-brand-blue rounded-full px-4 py-2 text-brand-dark bg-brand-lightblue font-medium"
+                value={localTemplates[emp.id] || CV_TEMPLATES[0].id}
+                onChange={e => handleTemplateChange(emp.id, e.target.value)}
+              >
+                {CV_TEMPLATES.map(tpl => (
+                  <option key={tpl.id} value={tpl.id}>{tpl.label}</option>
+                ))}
+              </select>
             </div>
             <div className="flex flex-wrap gap-3">
               {references.map((ref) => {
