@@ -3,7 +3,7 @@ import { MadeWithDyad } from "@/components/made-with-dyad";
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
+    <div className="min-h-screen bg-[#D9ECFB] flex flex-col">
       <TeamSelectionStep />
       <MadeWithDyad />
     </div>

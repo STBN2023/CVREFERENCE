@@ -18,14 +18,18 @@ export const FilterChips = ({ options, selected, onChange, label }: FilterChipsP
 
   return (
     <div>
-      {label && <div className="mb-2 text-sm font-semibold text-gray-700">{label}</div>}
+      {label && <div className="mb-2 text-sm font-semibold text-brand-dark">{label}</div>}
       <div className="flex flex-wrap gap-2">
         {options.map((option) => (
           <Button
             key={option}
             variant={selected.includes(option) ? "default" : "outline"}
             className={`rounded-full px-5 py-1.5 text-sm font-medium transition
-              ${selected.includes(option) ? "bg-blue-600 text-white border-blue-600" : ""}
+              ${
+                selected.includes(option)
+                  ? "bg-brand-yellow text-brand-dark border-brand-yellow"
+                  : "border-brand-dark text-brand-dark hover:bg-brand-pale"
+              }
             `}
             onClick={() => toggle(option)}
             type="button"

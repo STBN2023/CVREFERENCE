@@ -30,10 +30,10 @@ export const EmployeeCard = ({ employee, selected, onSelect }: EmployeeCardProps
   return (
     <Card
       className={cn(
-        "relative flex flex-col items-center p-5 cursor-pointer border-2 rounded-2xl shadow transition-all duration-200 outline-none focus:ring-2 focus:ring-blue-400",
+        "relative flex flex-col items-center p-5 cursor-pointer border-2 rounded-2xl shadow transition-all duration-200 outline-none focus:ring-2 focus:ring-brand-yellow",
         selected
-          ? "border-blue-600 bg-blue-50 scale-105 shadow-lg"
-          : "border-gray-200 hover:border-blue-300 bg-white"
+          ? "border-brand-yellow bg-brand-pale scale-105 shadow-lg"
+          : "border-brand-dark hover:border-brand-yellow bg-white"
       )}
       onClick={() => onSelect(employee.id)}
       tabIndex={0}
@@ -47,26 +47,26 @@ export const EmployeeCard = ({ employee, selected, onSelect }: EmployeeCardProps
           <img
             src={employee.avatarUrl}
             alt={employee.name}
-            className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
+            className="w-16 h-16 rounded-full object-cover border-2 border-brand-dark"
           />
         ) : (
-          <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center border-2 border-gray-200">
-            <User className="text-gray-400" size={36} />
+          <div className="w-16 h-16 rounded-full bg-brand-lightblue flex items-center justify-center border-2 border-brand-dark">
+            <User className="text-brand-dark" size={36} />
           </div>
         )}
         {selected && (
           <CheckCircle2
-            className="absolute -top-2 -right-2 text-blue-600 bg-white rounded-full animate-bounce shadow"
+            className="absolute -top-2 -right-2 text-brand-yellow bg-white rounded-full animate-bounce shadow"
             size={26}
             aria-label="Sélectionné"
           />
         )}
       </div>
-      <div className="font-semibold text-lg mb-1 text-gray-900">{employee.name}</div>
+      <div className="font-semibold text-lg mb-1 text-brand-dark">{employee.name}</div>
       <div className="flex flex-wrap gap-1 justify-center">
-        <Badge variant="secondary" className="rounded-full px-3 py-0.5">{employee.agency}</Badge>
-        <Badge variant="outline" className="rounded-full px-3 py-0.5">{employee.function}</Badge>
-        <Badge variant="default" className="rounded-full px-3 py-0.5">{employee.level}</Badge>
+        <Badge variant="secondary" className="rounded-full px-3 py-0.5 bg-brand-lightblue text-brand-dark border-none">{employee.agency}</Badge>
+        <Badge variant="outline" className="rounded-full px-3 py-0.5 border-brand-blue text-brand-blue">{employee.function}</Badge>
+        <Badge variant="default" className="rounded-full px-3 py-0.5 bg-brand-yellow text-brand-dark border-none">{employee.level}</Badge>
       </div>
     </Card>
   );
