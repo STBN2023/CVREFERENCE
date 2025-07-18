@@ -28,23 +28,23 @@ function randomThemeVars() {
   };
 }
 
-// Couleurs de la charte graphique d'origine (hex exacts)
+// Couleurs de la charte graphique d'origine (HSL exacts)
 const ORIGINAL_THEME: Record<string, string> = {
-  "--background": "#ffffff",
-  "--foreground": "#1D1E3D",
-  "--primary": "#1D1E3D",
-  "--primary-foreground": "#ffffff",
-  "--secondary": "#EBC14A",
-  "--secondary-foreground": "#1D1E3D",
-  "--accent": "#266EB1",
-  "--accent-foreground": "#ffffff",
-  "--muted": "#FCE7B3",
-  "--muted-foreground": "#1D1E3D",
-  "--brand-dark": "#1D1E3D",
-  "--brand-yellow": "#EBC14A",
-  "--brand-pale": "#FCE7B3",
-  "--brand-blue": "#266EB1",
-  "--brand-lightblue": "#D9ECFB",
+  "--background": "0 0% 100%", // blanc
+  "--foreground": "237 34% 18%", // #1D1E3D
+  "--primary": "237 34% 18%", // #1D1E3D
+  "--primary-foreground": "0 0% 100%", // blanc
+  "--secondary": "45 78% 61%", // #EBC14A
+  "--secondary-foreground": "237 34% 18%", // #1D1E3D
+  "--accent": "212 63% 43%", // #266EB1
+  "--accent-foreground": "0 0% 100%", // blanc
+  "--muted": "43 89% 86%", // #FCE7B3
+  "--muted-foreground": "237 34% 18%", // #1D1E3D
+  "--brand-dark": "237 34% 18%", // #1D1E3D
+  "--brand-yellow": "45 78% 61%", // #EBC14A
+  "--brand-pale": "43 89% 86%", // #FCE7B3
+  "--brand-blue": "212 63% 43%", // #266EB1
+  "--brand-lightblue": "205 74% 92%", // #D9ECFB
 };
 
 export const RainbowThemeButton = () => {
