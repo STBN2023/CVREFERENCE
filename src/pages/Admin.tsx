@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogC
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { showSuccess } from "@/utils/toast";
-import { Trash2, UserPlus, FilePlus2, Users } from "lucide-react";
+import { Trash2, UserPlus, FilePlus2, Users, Pencil } from "lucide-react";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 
 type Salarie = {
@@ -26,7 +26,7 @@ type Reference = {
   type_mission: string;
   montant: number;
   description_projet: string;
-  salaries: string[]; // Liste des IDs des salariés associés
+  salaries: string[];
 };
 
 const AGENCES = ["Paris", "Lyon", "Marseille", "Bordeaux", "Lille", "Toulouse"];
@@ -34,7 +34,6 @@ const FONCTIONS = ["Architecte", "Ingénieur", "Chargé d'affaires", "Chef de pr
 const NIVEAUX = ["Junior", "Confirmé", "Senior", "Expert"];
 const TYPES_MISSION = ["Construction", "Rénovation", "Extension", "Audit", "Conseil"];
 
-// Données de test
 const MOCK_SALARIES: Salarie[] = [
   { id: "1", nom: "Martin", prenom: "Alice", agence: "Paris", fonction: "Ingénieur", niveau: "Senior", actif: true },
   { id: "2", nom: "Dubois", prenom: "Benoit", agence: "Lyon", fonction: "Architecte", niveau: "Confirmé", actif: true },
@@ -78,12 +77,13 @@ const MOCK_REFERENCES: Reference[] = [
 ];
 
 function Admin() {
-  // Mock data (in-memory)
   const [salaries, setSalaries] = useState<Salarie[]>(MOCK_SALARIES);
   const [references, setReferences] = useState<Reference[]>(MOCK_REFERENCES);
+
   // Dialogs
   const [openSalarie, setOpenSalarie] = useState(false);
   const [openReference, setOpenReference] = useState(false);
+
   // Form state
   const [salarieForm, setSalarieForm] = useState<Omit<Salarie, "id">>({
     nom: "",
@@ -104,6 +104,10 @@ function Admin() {
     salaries: [],
   });
 
+  // Edition
+  const [editSalarieId, setEditSalarieId] = useState<string | null>(null);
+  const [editReferenceId, setEditReferenceId] = useState<string | null>(null);
+
   // Suppression dialogs
   const [deleteSalarieId, setDeleteSalarieId] = useState<string | null>(null);
   const [deleteReferenceId, setDeleteReferenceId] = useState<string | null>(null);
@@ -123,7 +127,28 @@ function Admin() {
       niveau: "",
       actif: true,
     });
+    setEditSalarieId(null);
     showSuccess("Salarié ajouté !");
+  };
+
+  const handleEditSalarie = () => {
+    if (!editSalarieId) return;
+    setSalaries((prev) =>
+      prev.map((s) =>
+        s.id === editSalarieId ? { ...s, ...salarieForm } : s
+      )
+    );
+    setOpenSalarie(false);
+    setEditSalarieId(null);
+    setSalarieForm({
+      nom: "",
+      prenom: "",
+      agence: "",
+      fonction: "",
+      niveau: "",
+      actif: true,
+    });
+    showSuccess("Salarié modifié !");
   };
 
   const handleAddReference = () => {
@@ -142,7 +167,30 @@ function Admin() {
       description_projet: "",
       salaries: [],
     });
+    setEditReferenceId(null);
     showSuccess("Référence ajoutée !");
+  };
+
+  const handleEditReference = () => {
+    if (!editReferenceId) return;
+    setReferences((prev) =>
+      prev.map((r) =>
+        r.id === editReferenceId ? { ...r, ...referenceForm } : r
+      )
+    );
+    setOpenReference(false);
+    setEditReferenceId(null);
+    setReferenceForm({
+      nom_projet: "",
+      client: "",
+      ville: "",
+      annee: new Date().getFullYear(),
+      type_mission: "",
+      montant: 0,
+      description_projet: "",
+      salaries: [],
+    });
+    showSuccess("Référence modifiée !");
   };
 
   const handleDeleteSalarie = () => {
@@ -171,6 +219,35 @@ function Admin() {
     }));
   };
 
+  // Pré-remplissage pour édition
+  const openEditSalarie = (s: Salarie) => {
+    setSalarieForm({
+      nom: s.nom,
+      prenom: s.prenom,
+      agence: s.agence,
+      fonction: s.fonction,
+      niveau: s.niveau,
+      actif: s.actif,
+    });
+    setEditSalarieId(s.id);
+    setOpenSalarie(true);
+  };
+
+  const openEditReference = (r: Reference) => {
+    setReferenceForm({
+      nom_projet: r.nom_projet,
+      client: r.client,
+      ville: r.ville,
+      annee: r.annee,
+      type_mission: r.type_mission,
+      montant: r.montant,
+      description_projet: r.description_projet,
+      salaries: r.salaries,
+    });
+    setEditReferenceId(r.id);
+    setOpenReference(true);
+  };
+
   return (
     <div className="max-w-6xl mx-auto py-10 px-2">
       <h1 className="text-3xl font-bold mb-8 text-brand-dark">Administration</h1>
@@ -178,7 +255,21 @@ function Admin() {
       <section className="mb-12">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-brand-blue">Salariés</h2>
-          <Button onClick={() => setOpenSalarie(true)} className="bg-brand-yellow text-brand-dark font-bold flex items-center gap-2">
+          <Button
+            onClick={() => {
+              setOpenSalarie(true);
+              setEditSalarieId(null);
+              setSalarieForm({
+                nom: "",
+                prenom: "",
+                agence: "",
+                fonction: "",
+                niveau: "",
+                actif: true,
+              });
+            }}
+            className="bg-brand-yellow text-brand-dark font-bold flex items-center gap-2"
+          >
             <UserPlus size={18} /> Ajouter un salarié
           </Button>
         </div>
@@ -209,7 +300,15 @@ function Admin() {
                   <td className="px-4 py-2">{s.fonction}</td>
                   <td className="px-4 py-2">{s.niveau}</td>
                   <td className="px-4 py-2">{s.actif ? "Oui" : "Non"}</td>
-                  <td className="px-4 py-2">
+                  <td className="px-4 py-2 flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Éditer"
+                      onClick={() => openEditSalarie(s)}
+                    >
+                      <Pencil className="text-brand-blue" size={18} />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -229,7 +328,23 @@ function Admin() {
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-brand-blue">Références</h2>
-          <Button onClick={() => setOpenReference(true)} className="bg-brand-yellow text-brand-dark font-bold flex items-center gap-2">
+          <Button
+            onClick={() => {
+              setOpenReference(true);
+              setEditReferenceId(null);
+              setReferenceForm({
+                nom_projet: "",
+                client: "",
+                ville: "",
+                annee: new Date().getFullYear(),
+                type_mission: "",
+                montant: 0,
+                description_projet: "",
+                salaries: [],
+              });
+            }}
+            className="bg-brand-yellow text-brand-dark font-bold flex items-center gap-2"
+          >
             <FilePlus2 size={18} /> Ajouter une référence
           </Button>
         </div>
@@ -277,7 +392,15 @@ function Admin() {
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-4 py-2 flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Éditer"
+                      onClick={() => openEditReference(r)}
+                    >
+                      <Pencil className="text-brand-blue" size={18} />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -293,20 +416,39 @@ function Admin() {
           </table>
         </div>
       </section>
-      {/* Dialogs améliorés */}
-      <Dialog open={openSalarie} onOpenChange={setOpenSalarie}>
+      {/* Dialogs salariés */}
+      <Dialog open={openSalarie} onOpenChange={(open) => {
+        setOpenSalarie(open);
+        if (!open) {
+          setEditSalarieId(null);
+          setSalarieForm({
+            nom: "",
+            prenom: "",
+            agence: "",
+            fonction: "",
+            niveau: "",
+            actif: true,
+          });
+        }
+      }}>
         <DialogContent className="max-w-lg bg-brand-pale border-2 border-brand-yellow rounded-2xl shadow-2xl">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-2">
               <UserPlus className="text-brand-blue" size={28} />
-              <DialogTitle className="text-2xl text-brand-blue">Nouveau salarié</DialogTitle>
+              <DialogTitle className="text-2xl text-brand-blue">
+                {editSalarieId ? "Modifier le salarié" : "Nouveau salarié"}
+              </DialogTitle>
             </div>
-            <p className="text-sm text-brand-dark/70 mb-2">Remplissez les informations du salarié à ajouter.</p>
+            <p className="text-sm text-brand-dark/70 mb-2">
+              {editSalarieId
+                ? "Modifiez les informations du salarié."
+                : "Remplissez les informations du salarié à ajouter."}
+            </p>
           </DialogHeader>
           <form
             onSubmit={e => {
               e.preventDefault();
-              handleAddSalarie();
+              editSalarieId ? handleEditSalarie() : handleAddSalarie();
             }}
             className="space-y-4"
           >
@@ -346,7 +488,9 @@ function Admin() {
               </div>
             </div>
             <DialogFooter className="mt-2 flex gap-2">
-              <Button type="submit" className="bg-brand-blue text-white font-bold rounded-full px-6 py-2">Enregistrer</Button>
+              <Button type="submit" className="bg-brand-blue text-white font-bold rounded-full px-6 py-2">
+                {editSalarieId ? "Enregistrer les modifications" : "Enregistrer"}
+              </Button>
               <DialogClose asChild>
                 <Button type="button" variant="outline" className="rounded-full px-6 py-2">Annuler</Button>
               </DialogClose>
@@ -354,19 +498,41 @@ function Admin() {
           </form>
         </DialogContent>
       </Dialog>
-      <Dialog open={openReference} onOpenChange={setOpenReference}>
+      {/* Dialogs références */}
+      <Dialog open={openReference} onOpenChange={(open) => {
+        setOpenReference(open);
+        if (!open) {
+          setEditReferenceId(null);
+          setReferenceForm({
+            nom_projet: "",
+            client: "",
+            ville: "",
+            annee: new Date().getFullYear(),
+            type_mission: "",
+            montant: 0,
+            description_projet: "",
+            salaries: [],
+          });
+        }
+      }}>
         <DialogContent className="max-w-lg bg-brand-pale border-2 border-brand-yellow rounded-2xl shadow-2xl">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-2">
               <FilePlus2 className="text-brand-blue" size={28} />
-              <DialogTitle className="text-2xl text-brand-blue">Nouvelle référence</DialogTitle>
+              <DialogTitle className="text-2xl text-brand-blue">
+                {editReferenceId ? "Modifier la référence" : "Nouvelle référence"}
+              </DialogTitle>
             </div>
-            <p className="text-sm text-brand-dark/70 mb-2">Renseignez les détails du projet de référence et associez les salariés concernés.</p>
+            <p className="text-sm text-brand-dark/70 mb-2">
+              {editReferenceId
+                ? "Modifiez les détails du projet de référence et les salariés associés."
+                : "Renseignez les détails du projet de référence et associez les salariés concernés."}
+            </p>
           </DialogHeader>
           <form
             onSubmit={e => {
               e.preventDefault();
-              handleAddReference();
+              editReferenceId ? handleEditReference() : handleAddReference();
             }}
             className="space-y-4"
           >
@@ -428,7 +594,9 @@ function Admin() {
               <textarea required className="w-full border rounded px-2 py-2 min-h-[60px] bg-white" value={referenceForm.description_projet} onChange={e => setReferenceForm(f => ({ ...f, description_projet: e.target.value }))} />
             </div>
             <DialogFooter className="mt-2 flex gap-2">
-              <Button type="submit" className="bg-brand-blue text-white font-bold rounded-full px-6 py-2">Enregistrer</Button>
+              <Button type="submit" className="bg-brand-blue text-white font-bold rounded-full px-6 py-2">
+                {editReferenceId ? "Enregistrer les modifications" : "Enregistrer"}
+              </Button>
               <DialogClose asChild>
                 <Button type="button" variant="outline" className="rounded-full px-6 py-2">Annuler</Button>
               </DialogClose>
