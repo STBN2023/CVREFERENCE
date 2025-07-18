@@ -11,6 +11,7 @@ import Recap from "./pages/Recap";
 import Admin from "./pages/Admin";
 import { BurgerMenu } from "@/components/BurgerMenu";
 import ReferenceAssociation from "./pages/ReferenceAssociation";
+import { RainbowThemeButton } from "@/components/RainbowThemeButton";
 
 const queryClient = new QueryClient();
 
@@ -21,6 +22,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <BurgerMenu />
+        <RainbowThemeButton />
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/team" element={<TeamPage />} />
