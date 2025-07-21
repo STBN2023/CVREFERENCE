@@ -54,10 +54,14 @@ app.post("/api/enrich-cv", upload.single("pptx"), async (req, res) => {
 
       await automizer.process();
 
+      // Limite à 5 références max
+      const MAX_REFERENCES = 5;
+      const refsToShow = references.slice(0, MAX_REFERENCES);
+
       // Injecte les références dans la zone nommée "references_box" de la première slide
       await automizer.setText(
         "references_box",
-        references.map(
+        refsToShow.map(
           (ref, i) =>
             `${i + 1}. ${ref.nom_projet} (${ref.annee}, ${ref.ville}) - ${ref.type_mission} - ${ref.client}`
         ).join('\n'),
