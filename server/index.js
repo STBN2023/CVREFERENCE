@@ -36,9 +36,9 @@ app.post("/api/enrich-cv", upload.single("pptx"), async (req, res) => {
       return res.status(500).json({ error: "Le template PowerPoint 'template.pptx' est manquant dans le dossier server." });
     }
 
-    // Correction: Supprime .create() pour compatibilité v0.6.0
-    const automizer = new Automizer()
-      .loadRoot(templatePath)
+    // Utilisation de l'API v0.5.0
+    const automizer = Automizer.create()
+      .load(templatePath)
       .load(pptxPath)
       .write(outputPath);
 
