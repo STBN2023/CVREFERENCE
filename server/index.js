@@ -3,8 +3,11 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const { Automizer } = require("pptx-automizer");
+const cors = require("cors");
 
 const app = express();
+app.use(cors()); // Autorise toutes les origines
+
 const upload = multer({ dest: "uploads/" });
 
 app.use(express.json());
