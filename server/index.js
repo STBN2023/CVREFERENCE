@@ -24,20 +24,17 @@ app.get("/api/test-pptx", (req, res) => {
 app.post("/api/enrich-cv", upload.single("pptx"), async (req, res) => {
   let pptxPath, outputPath;
   try {
-    // 1. Vérification du fichier uploadé
     if (!req.file) {
       return res.status(400).json({ error: "Aucun fichier PowerPoint reçu (champ 'pptx' manquant)." });
     }
     pptxPath = req.file.path;
 
-    // 2. Vérification du template
     const templatePath = path.join(__dirname, "template.pptx");
     if (!fs.existsSync(templatePath)) {
       fs.unlinkSync(pptxPath);
       return res.status(500).json({ error: "Le template PowerPoint 'template.pptx' est manquant dans le dossier server." });
     }
 
-    // 3. Vérification du format JSON des références
     let references = [];
     try {
       references = JSON.parse(req.body.references || "[]");
@@ -47,29 +44,26 @@ app.post("/api/enrich-cv", upload.single("pptx"), async (req, res) => {
       return res.status(400).json({ error: "Le champ 'references' n'est pas un JSON valide.", details: e.message });
     }
 
-    // 4. Préparation du chemin de sortie
     outputPath = path.join("uploads", `enriched_${Date.now()}.pptx`);
 
-    // 5. Utilisation d'Automizer v0.5.0
     let automizer;
     try {
       automizer = new Automizer({ templateDir: __dirname })
         .load(templatePath)
-        .load(pptxPath)
         .write(outputPath);
 
       await automizer.process();
 
-      // Ajoute une slide après le process
-      await automizer.createSlide("TITLE_AND_CONTENT", {
-        title: "Références sélectionnées",
-        content: references.map(
+      // Injecte les références dans la zone nommée "references_box" de la première slide
+      await automizer.setText(
+        "references_box",
+        references.map(
           (ref, i) =>
             `${i + 1}. ${ref.nom_projet} (${ref.annee}, ${ref.ville}) - ${ref.type_mission} - ${ref.client}`
-        ).join("\n"),
-      });
+        ).join('\n'),
+        0 // première slide
+      );
 
-      // Re-process pour inclure la nouvelle slide
       await automizer.process();
     } catch (e) {
       if (fs.existsSync(pptxPath)) fs.unlinkSync(pptxPath);
@@ -78,7 +72,6 @@ app.post("/api/enrich-cv", upload.single("pptx"), async (req, res) => {
       return res.status(500).json({ error: "Erreur lors de la génération du PowerPoint.", details: e.message });
     }
 
-    // 6. Envoi du fichier généré
     res.download(outputPath, "cv_enrichi.pptx", (err) => {
       try {
         if (fs.existsSync(pptxPath)) fs.unlinkSync(pptxPath);
