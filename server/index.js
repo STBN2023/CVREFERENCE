@@ -12,15 +12,15 @@ const upload = multer({ dest: "uploads/" });
 
 app.use(express.json());
 
+// NOUVELLE VERSION : adapte les placeholders à ceux de l'image
 function fillReferenceTemplate(template, ref) {
   if (!ref) return "";
   return template
-    .replace(/{{REF_NOM}}/g, ref.nom_projet || "")
-    .replace(/{{REF_CLIENT}}/g, ref.client || "")
+    .replace(/{{REF_RESIDENCE}}/g, ref.residence || "")
+    .replace(/{{REF_MOA}}/g, ref.moa || "")
     .replace(/{{REF_MONTANT}}/g, ref.montant ? ref.montant.toLocaleString() + " €" : "")
-    .replace(/{{REF_TYPE}}/g, ref.type_mission || "")
-    .replace(/{{REF_ANNEE}}/g, ref.annee ? ref.annee.toString() : "")
-    .replace(/{{REF_VILLE}}/g, ref.ville || "");
+    .replace(/{{REF_TRAVAUX}}/g, ref.travaux || "")
+    .replace(/{{REF_REALISATION}}/g, ref.realisation || "");
 }
 
 app.get("/api/test-pptx", (req, res) => {
@@ -73,14 +73,12 @@ app.post("/api/enrich-cv", upload.single("pptx"), async (req, res) => {
       for (let i = 0; i < MAX_REFERENCES; i++) {
         const ref = refsToShow[i];
         const placeholderName = `reference_${i + 1}`;
-        // Récupère le texte du placeholder dans la slide (optionnel, sinon hardcode le template ici)
-        // Ici, on suppose que tu connais le template utilisé dans PowerPoint
+        // Utilise le template adapté à tes nouveaux placeholders
         const template = 
-`{{REF_NOM}}
-Maître d’ouvrage: {{REF_CLIENT}}
+`{{REF_RESIDENCE}}
+Maître d’ouvrage: {{REF_MOA}}
 Montant: {{REF_MONTANT}}
-Type de travaux effectués: {{REF_TYPE}}
-Réalisation: {{REF_ANNEE}}, {{REF_VILLE}}`;
+Type de travaux effectués: {{REF_TRAVAUX}}  Réalisation:  {{REF_REALISATION}}`;
         const text = ref ? fillReferenceTemplate(template, ref) : "";
         await automizer.setText(placeholderName, text, 0); // 0 = première slide
       }
