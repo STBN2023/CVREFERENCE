@@ -2,7 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-const { Automizer } = require("pptx-automizer");
+const Automizer = require("pptx-automizer"); // <-- Correction ici
 const cors = require("cors");
 
 const app = express();
