@@ -50,7 +50,7 @@ app.post("/api/enrich-cv", upload.single("pptx"), async (req, res) => {
     // 4. Préparation du chemin de sortie
     outputPath = path.join("uploads", `enriched_${Date.now()}.pptx`);
 
-    // 5. Utilisation d'Automizer
+    // 5. Utilisation d'Automizer v0.5.0
     let automizer;
     try {
       automizer = new Automizer({ templateDir: __dirname })
@@ -58,7 +58,10 @@ app.post("/api/enrich-cv", upload.single("pptx"), async (req, res) => {
         .load(pptxPath)
         .write(outputPath);
 
-      automizer.addSlide("TITLE_AND_CONTENT", {
+      await automizer.process();
+
+      // Ajoute une slide après le process
+      await automizer.createSlide("TITLE_AND_CONTENT", {
         title: "Références sélectionnées",
         content: references.map(
           (ref, i) =>
@@ -66,9 +69,10 @@ app.post("/api/enrich-cv", upload.single("pptx"), async (req, res) => {
         ).join("\n"),
       });
 
+      // Re-process pour inclure la nouvelle slide
       await automizer.process();
     } catch (e) {
-      fs.unlinkSync(pptxPath);
+      if (fs.existsSync(pptxPath)) fs.unlinkSync(pptxPath);
       if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
       console.error("Erreur Automizer :", e);
       return res.status(500).json({ error: "Erreur lors de la génération du PowerPoint.", details: e.message });
@@ -87,7 +91,6 @@ app.post("/api/enrich-cv", upload.single("pptx"), async (req, res) => {
       }
     });
   } catch (err) {
-    // Gestion d'une erreur inattendue
     if (pptxPath && fs.existsSync(pptxPath)) fs.unlinkSync(pptxPath);
     if (outputPath && fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
     console.error("Erreur inattendue :", err);
