@@ -2,7 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-const Automizer = require("pptx-automizer").default; // <-- Import via .default
+const Automizer = require("pptx-automizer").default;
 const cors = require("cors");
 
 const app = express();
@@ -36,8 +36,8 @@ app.post("/api/enrich-cv", upload.single("pptx"), async (req, res) => {
       return res.status(500).json({ error: "Le template PowerPoint 'template.pptx' est manquant dans le dossier server." });
     }
 
-    // Utilisation de l'API v0.5.0 : new Automizer()
-    const automizer = new Automizer()
+    // Correction : passer une config minimale à Automizer
+    const automizer = new Automizer({ templateDir: __dirname })
       .load(templatePath)
       .load(pptxPath)
       .write(outputPath);
