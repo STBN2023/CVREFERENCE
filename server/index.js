@@ -50,7 +50,8 @@ app.post("/api/enrich-cv", upload.single("pptx"), async (req, res) => {
       fs.unlinkSync(outputPath);
     });
   } catch (err) {
-    res.status(500).json({ error: "Erreur lors de l'enrichissement du CV." });
+    console.error("Erreur lors de l'enrichissement du CV :", err);
+    res.status(500).json({ error: "Erreur lors de l'enrichissement du CV.", details: err.message });
   }
 });
 
