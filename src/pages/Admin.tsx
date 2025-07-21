@@ -283,14 +283,63 @@ function Admin() {
     }
   };
 
-  // Bouton test enrichissement PowerPoint
+  // Bouton test enrichissement PowerPoint avec contrôles et debug
   const handleTestEnrich = async () => {
     setLoadingTest(true);
     try {
+      // 1. Vérifie que le backend répond
+      const backendUrl = "http://localhost:4000";
+      let res;
+      try {
+        res = await fetch(backendUrl + "/api/test-pptx", { method: "HEAD" });
+      } catch (err) {
+        showError("Le backend ne répond pas sur http://localhost:4000");
+        console.error("[DEBUG] Backend unreachable:", err);
+        setLoadingTest(false);
+        return;
+      }
+      if (!res.ok) {
+        showError("Le backend répond mais /api/test-pptx n'est pas disponible (" + res.status + ")");
+        console.error("[DEBUG] /api/test-pptx HEAD status:", res.status, res.statusText);
+        setLoadingTest(false);
+        return;
+      }
+
+      // 2. Vérifie que le fichier template.pptx existe côté backend
+      // On tente d'appeler enrich-cv avec un mauvais JSON pour forcer le backend à vérifier le template
+      const fakeForm = new FormData();
+      fakeForm.append("pptx", new Blob(["fake"], { type: "application/vnd.openxmlformats-officedocument.presentationml.presentation" }), "test.pptx");
+      fakeForm.append("references", "not a json");
+      let enrichRes;
+      try {
+        enrichRes = await fetch(backendUrl + "/api/enrich-cv", {
+          method: "POST",
+          body: fakeForm,
+        });
+      } catch (err) {
+        showError("Impossible de contacter /api/enrich-cv");
+        console.error("[DEBUG] /api/enrich-cv unreachable:", err);
+        setLoadingTest(false);
+        return;
+      }
+      if (enrichRes.status === 500) {
+        const errJson = await enrichRes.json().catch(() => ({}));
+        showError("Erreur serveur lors de l'accès à template.pptx : " + (errJson.error || "Erreur inconnue"));
+        console.error("[DEBUG] /api/enrich-cv 500:", errJson);
+        setLoadingTest(false);
+        return;
+      }
+      if (enrichRes.status === 400) {
+        // C'est normal, on a envoyé un mauvais JSON, donc le template existe probablement
+        console.info("[DEBUG] /api/enrich-cv 400 (template.pptx trouvé, JSON mauvais)");
+      }
+
+      // 3. Lance le test réel
       await testEnrichPptx();
       showSuccess("Téléchargement du PowerPoint enrichi lancé !");
     } catch (e) {
       showError("Erreur lors du test d'enrichissement PowerPoint.");
+      console.error("[DEBUG] Exception dans handleTestEnrich:", e);
     } finally {
       setLoadingTest(false);
     }
