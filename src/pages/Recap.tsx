@@ -2,9 +2,9 @@ import { useWorkflow } from "@/components/WorkflowContext";
 import { EMPLOYEES } from "@/components/TeamSelectionStep";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
-import { showSuccess } from "@/utils/toast";
-import { Pencil } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { showSuccess, showError } from "@/utils/toast";
+import { Pencil, Eye } from "lucide-react";
 
 const MOCK_REFERENCES = [
   {
@@ -69,6 +69,10 @@ export const RecapStep = () => {
   } = useWorkflow();
   const navigate = useNavigate();
 
+  // Pour l'exemple, on suppose que chaque membre a un fichier CV PowerPoint (mock)
+  // Dans une vraie app, il faudrait récupérer le vrai fichier uploadé par l'admin
+  const [downloading, setDownloading] = useState<string | null>(null);
+
   // Redirige si aucune sélection
   useEffect(() => {
     if (selectedTeam.length === 0 || selectedReferences.length === 0) {
@@ -99,6 +103,53 @@ export const RecapStep = () => {
     return tpl ? tpl.label : "Classique";
   };
 
+  // Simule la récupération du fichier PowerPoint du salarié (mock)
+  // Dans une vraie app, il faut stocker le fichier dans l'objet du salarié
+  const getCvFileForMember = (memberId: string) => {
+    // TODO: Remplacer par la vraie logique de récupération du fichier
+    // Ici, on retourne null pour simuler l'absence de fichier
+    return null;
+  };
+
+  // Envoie le fichier pptx + les références au backend et télécharge le fichier enrichi
+  const handleDownloadEnrichedCv = async (memberId: string) => {
+    const cvFile = getCvFileForMember(memberId);
+    if (!cvFile) {
+      showError("Aucun fichier PowerPoint associé à ce membre.");
+      return;
+    }
+    setDownloading(memberId);
+    try {
+      const formData = new FormData();
+      formData.append("pptx", cvFile); // cvFile doit être un File ou Blob
+      formData.append(
+        "references",
+        JSON.stringify(referenceAssociation[memberId]?.map(refId =>
+          references.find(r => r.id === refId)
+        ).filter(Boolean) || [])
+      );
+      const response = await fetch("http://localhost:4000/api/enrich-cv", {
+        method: "POST",
+        body: formData,
+      });
+      if (!response.ok) throw new Error("Erreur lors de la génération du CV.");
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "cv_enrichi.pptx";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      showSuccess("CV enrichi téléchargé !");
+    } catch (e) {
+      showError("Impossible de générer le CV enrichi.");
+    } finally {
+      setDownloading(null);
+    }
+  };
+
   return (
     <div className="max-w-5xl mx-auto py-10 px-2">
       <h2 className="text-4xl font-extrabold mb-10 text-center text-brand-dark tracking-tight drop-shadow-sm">
@@ -119,7 +170,7 @@ export const RecapStep = () => {
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
           {team.map((member) => (
-            <div key={member.id} className="bg-white rounded-xl shadow p-4 border-2 border-brand-dark">
+            <div key={member.id} className="bg-white rounded-xl shadow p-4 border-2 border-brand-dark flex flex-col gap-2">
               <div className="font-semibold text-lg text-brand-dark mb-1">{member.name}</div>
               <div className="text-sm text-brand-dark/80">{member.function} • {member.level}</div>
               <div className="text-xs text-brand-dark/60 mb-2">{member.agency}</div>
@@ -138,6 +189,20 @@ export const RecapStep = () => {
                   <li className="text-xs text-gray-400">Aucune</li>
                 )}
               </ul>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2 flex items-center gap-2 border-brand-blue text-brand-blue font-semibold"
+                onClick={() => handleDownloadEnrichedCv(member.id)}
+                disabled={downloading === member.id || !getCvFileForMember(member.id)}
+                title="Télécharger un aperçu du CV enrichi"
+              >
+                <Eye size={16} className="mr-1" />
+                {downloading === member.id ? "Génération..." : "Aperçu du CV enrichi"}
+              </Button>
+              {!getCvFileForMember(member.id) && (
+                <span className="text-xs text-red-500 mt-1">Aucun fichier PowerPoint associé</span>
+              )}
             </div>
           ))}
           {team.length === 0 && (
