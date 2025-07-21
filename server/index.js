@@ -1,0 +1,46 @@
+const express = require("express");
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
+const { Automizer } = require("pptx-automizer");
+
+const app = express();
+const upload = multer({ dest: "uploads/" });
+
+app.use(express.json());
+
+app.post("/api/enrich-cv", upload.single("pptx"), async (req, res) => {
+  try {
+    const references = JSON.parse(req.body.references || "[]");
+    const pptxPath = req.file.path;
+    const outputPath = path.join("uploads", `enriched_${Date.now()}.pptx`);
+
+    // Crée un nouvel Automizer à partir du template
+    const automizer = new Automizer()
+      .load(pptxPath)
+      .write(outputPath);
+
+    // Ajoute une nouvelle slide avec les références (simple exemple)
+    automizer.addSlide("TITLE_AND_CONTENT", {
+      title: "Références sélectionnées",
+      content: references.map(
+        (ref, i) =>
+          `${i + 1}. ${ref.nom_projet} (${ref.annee}, ${ref.ville}) - ${ref.type_mission} - ${ref.client}`
+      ).join("\n"),
+    });
+
+    await automizer.process();
+
+    // Envoie le fichier pptx enrichi
+    res.download(outputPath, "cv_enrichi.pptx", (err) => {
+      fs.unlinkSync(pptxPath);
+      fs.unlinkSync(outputPath);
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur lors de l'enrichissement du CV." });
+  }
+});
+
+app.listen(4000, () => {
+  console.log("Backend listening on http://localhost:4000");
+});
