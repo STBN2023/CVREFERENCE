@@ -69,11 +69,8 @@ export const RecapStep = () => {
   } = useWorkflow();
   const navigate = useNavigate();
 
-  // Pour l'exemple, on suppose que chaque membre a un fichier CV PowerPoint (mock)
-  // Dans une vraie app, il faudrait récupérer le vrai fichier uploadé par l'admin
   const [downloading, setDownloading] = useState<string | null>(null);
 
-  // Redirige si aucune sélection
   useEffect(() => {
     if (selectedTeam.length === 0 || selectedReferences.length === 0) {
       navigate("/");
@@ -103,25 +100,31 @@ export const RecapStep = () => {
     return tpl ? tpl.label : "Classique";
   };
 
-  // Simule la récupération du fichier PowerPoint du salarié (mock)
-  // Dans une vraie app, il faut stocker le fichier dans l'objet du salarié
-  const getCvFileForMember = (memberId: string) => {
-    // TODO: Remplacer par la vraie logique de récupération du fichier
-    // Ici, on retourne null pour simuler l'absence de fichier
-    return null;
+  // Télécharge test.pptx depuis le backend et retourne un File/Blob
+  const getCvFileForMember = async (memberId: string): Promise<File | Blob | null> => {
+    try {
+      const response = await fetch("http://localhost:4000/api/test-pptx");
+      if (!response.ok) return null;
+      const blob = await response.blob();
+      // On retourne un File pour que le backend ait le nom correct
+      return new File([blob], "test.pptx", { type: "application/vnd.openxmlformats-officedocument.presentationml.presentation" });
+    } catch {
+      return null;
+    }
   };
 
   // Envoie le fichier pptx + les références au backend et télécharge le fichier enrichi
   const handleDownloadEnrichedCv = async (memberId: string) => {
-    const cvFile = getCvFileForMember(memberId);
-    if (!cvFile) {
-      showError("Aucun fichier PowerPoint associé à ce membre.");
-      return;
-    }
     setDownloading(memberId);
     try {
+      const cvFile = await getCvFileForMember(memberId);
+      if (!cvFile) {
+        showError("Aucun fichier PowerPoint associé à ce membre.");
+        setDownloading(null);
+        return;
+      }
       const formData = new FormData();
-      formData.append("pptx", cvFile); // cvFile doit être un File ou Blob
+      formData.append("pptx", cvFile);
       formData.append(
         "references",
         JSON.stringify(referenceAssociation[memberId]?.map(refId =>
@@ -194,15 +197,12 @@ export const RecapStep = () => {
                 size="sm"
                 className="mt-2 flex items-center gap-2 border-brand-blue text-brand-blue font-semibold"
                 onClick={() => handleDownloadEnrichedCv(member.id)}
-                disabled={downloading === member.id || !getCvFileForMember(member.id)}
+                disabled={downloading === member.id}
                 title="Télécharger un aperçu du CV enrichi"
               >
                 <Eye size={16} className="mr-1" />
                 {downloading === member.id ? "Génération..." : "Aperçu du CV enrichi"}
               </Button>
-              {!getCvFileForMember(member.id) && (
-                <span className="text-xs text-red-500 mt-1">Aucun fichier PowerPoint associé</span>
-              )}
             </div>
           ))}
           {team.length === 0 && (

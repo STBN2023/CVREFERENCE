@@ -9,6 +9,16 @@ const upload = multer({ dest: "uploads/" });
 
 app.use(express.json());
 
+// Route pour servir test.pptx
+app.get("/api/test-pptx", (req, res) => {
+  const pptxPath = path.join(__dirname, "test.pptx");
+  if (fs.existsSync(pptxPath)) {
+    res.download(pptxPath, "test.pptx");
+  } else {
+    res.status(404).send("Fichier test.pptx non trouvé");
+  }
+});
+
 app.post("/api/enrich-cv", upload.single("pptx"), async (req, res) => {
   try {
     const references = JSON.parse(req.body.references || "[]");
