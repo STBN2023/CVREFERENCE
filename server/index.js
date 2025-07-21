@@ -12,6 +12,17 @@ const upload = multer({ dest: "uploads/" });
 
 app.use(express.json());
 
+function fillReferenceTemplate(template, ref) {
+  if (!ref) return "";
+  return template
+    .replace(/{{REF_NOM}}/g, ref.nom_projet || "")
+    .replace(/{{REF_CLIENT}}/g, ref.client || "")
+    .replace(/{{REF_MONTANT}}/g, ref.montant ? ref.montant.toLocaleString() + " €" : "")
+    .replace(/{{REF_TYPE}}/g, ref.type_mission || "")
+    .replace(/{{REF_ANNEE}}/g, ref.annee ? ref.annee.toString() : "")
+    .replace(/{{REF_VILLE}}/g, ref.ville || "");
+}
+
 app.get("/api/test-pptx", (req, res) => {
   const pptxPath = path.join(__dirname, "test.pptx");
   if (fs.existsSync(pptxPath)) {
@@ -58,15 +69,21 @@ app.post("/api/enrich-cv", upload.single("pptx"), async (req, res) => {
       const MAX_REFERENCES = 5;
       const refsToShow = references.slice(0, MAX_REFERENCES);
 
-      // Injecte les références dans la zone nommée "references_box" de la première slide
-      await automizer.setText(
-        "references_box",
-        refsToShow.map(
-          (ref, i) =>
-            `${i + 1}. ${ref.nom_projet} (${ref.annee}, ${ref.ville}) - ${ref.type_mission} - ${ref.client}`
-        ).join('\n'),
-        0 // première slide
-      );
+      // Pour chaque placeholder, injecte la référence correspondante
+      for (let i = 0; i < MAX_REFERENCES; i++) {
+        const ref = refsToShow[i];
+        const placeholderName = `reference_${i + 1}`;
+        // Récupère le texte du placeholder dans la slide (optionnel, sinon hardcode le template ici)
+        // Ici, on suppose que tu connais le template utilisé dans PowerPoint
+        const template = 
+`{{REF_NOM}}
+Maître d’ouvrage: {{REF_CLIENT}}
+Montant: {{REF_MONTANT}}
+Type de travaux effectués: {{REF_TYPE}}
+Réalisation: {{REF_ANNEE}}, {{REF_VILLE}}`;
+        const text = ref ? fillReferenceTemplate(template, ref) : "";
+        await automizer.setText(placeholderName, text, 0); // 0 = première slide
+      }
 
       await automizer.process();
     } catch (e) {
