@@ -2,7 +2,7 @@ import { useWorkflow } from "@/components/WorkflowContext";
 import { EMPLOYEES } from "@/components/TeamSelectionStep";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { showSuccess, showError } from "@/utils/toast";
 import { Pencil, Eye } from "lucide-react";
 
@@ -101,14 +101,17 @@ export const RecapStep = () => {
   };
 
   // Télécharge test.pptx depuis le backend et retourne un File/Blob
-  const getCvFileForMember = async (memberId: string): Promise<File | Blob | null> => {
+  const getCvFileForMember = async (): Promise<File | Blob | null> => {
     try {
       const response = await fetch("http://localhost:4000/api/test-pptx");
-      if (!response.ok) return null;
+      if (!response.ok) {
+        showError("Impossible de récupérer test.pptx depuis le backend.");
+        return null;
+      }
       const blob = await response.blob();
-      // On retourne un File pour que le backend ait le nom correct
       return new File([blob], "test.pptx", { type: "application/vnd.openxmlformats-officedocument.presentationml.presentation" });
-    } catch {
+    } catch (e) {
+      showError("Erreur réseau lors de la récupération du fichier test.pptx.");
       return null;
     }
   };
@@ -117,9 +120,8 @@ export const RecapStep = () => {
   const handleDownloadEnrichedCv = async (memberId: string) => {
     setDownloading(memberId);
     try {
-      const cvFile = await getCvFileForMember(memberId);
+      const cvFile = await getCvFileForMember();
       if (!cvFile) {
-        showError("Aucun fichier PowerPoint associé à ce membre.");
         setDownloading(null);
         return;
       }
@@ -135,7 +137,11 @@ export const RecapStep = () => {
         method: "POST",
         body: formData,
       });
-      if (!response.ok) throw new Error("Erreur lors de la génération du CV.");
+      if (!response.ok) {
+        showError("Erreur lors de la génération du CV enrichi.");
+        setDownloading(null);
+        return;
+      }
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
