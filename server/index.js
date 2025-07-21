@@ -2,7 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-const Automizer = require("pptx-automizer");
+const { Automizer } = require("pptx-automizer"); // <-- Correction ici
 const cors = require("cors");
 
 const app = express();
@@ -37,7 +37,7 @@ app.post("/api/enrich-cv", upload.single("pptx"), async (req, res) => {
     }
 
     // Utilisation de l'API v0.5.0
-    const automizer = new Automizer()
+    const automizer = Automizer.create()
       .load(templatePath)
       .load(pptxPath)
       .write(outputPath);
