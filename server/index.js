@@ -29,6 +29,9 @@ app.post("/api/enrich-cv", upload.single("pptx"), async (req, res) => {
     const outputPath = path.join("uploads", `enriched_${Date.now()}.pptx`);
     const templatePath = path.join(__dirname, "template.pptx");
 
+    // Ajout du log de diagnostic
+    console.log("templatePath exists:", fs.existsSync(templatePath), templatePath);
+
     if (!fs.existsSync(templatePath)) {
       return res.status(500).json({ error: "Le template PowerPoint 'template.pptx' est manquant dans le dossier server." });
     }
