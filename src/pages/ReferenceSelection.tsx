@@ -8,12 +8,7 @@ const ReferenceSelection = () => {
   const { selectedReferences } = useWorkflow();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (selectedReferences.length > 0) {
-      navigate("/association");
-    }
-    // eslint-disable-next-line
-  }, [selectedReferences]);
+  // Redirection automatique supprimée pour permettre l'utilisation du bouton "Valider"
 
   return (
     <div className="min-h-screen bg-[#FCE7B3] flex flex-col">

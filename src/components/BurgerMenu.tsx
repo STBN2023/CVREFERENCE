@@ -8,6 +8,7 @@ const NAV_LINKS = [
   { to: "/team", label: "Équipe" },
   { to: "/references", label: "Références" },
   { to: "/recap", label: "Récapitulatif" },
+  { to: "/downloads", label: "📁 Téléchargements" },
   { to: "/admin", label: "Admin" },
 ];
 
