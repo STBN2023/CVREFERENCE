@@ -89,19 +89,9 @@ app.post('/api/enrich-cv', upload.single('pptx'), async (req, res) => {
     const fileBuffer = fs.readFileSync(req.file.path);
     const content = await zip.loadAsync(fileBuffer);
     
-    // 4. Construction du texte de remplacement
-    const refsText = references.map((ref, index) => {
-      const nom = ref.nom_projet || ref.residence || `Projet ${index + 1}`;
-      const client = ref.client || ref.moa || 'Client non spécifié';
-      const montant = ref.montant ? `${ref.montant.toLocaleString()} €` : 'Non spécifié';
-      const annee = ref.annee || ref.realisation || 'Non spécifié';
-      
-      return `${index + 1}. ${nom}\n   Client: ${client}\n   Montant: ${montant}\n   Année: ${annee}`;
-    }).join('\n\n') || 'Aucune référence disponible';
+    // 4. Remplacement individuel des placeholders
+    console.log('🔄 [ENRICH-CV] Début du remplacement individuel des placeholders');
     
-    console.log('📝 [ENRICH-CV] Texte de remplacement généré:', refsText.length, 'caractères');
-    
-    // 5. Remplacement dans les slides
     const files = Object.keys(content.files);
     let replacements = 0;
     
@@ -109,18 +99,73 @@ app.post('/api/enrich-cv', upload.single('pptx'), async (req, res) => {
       if (fileName.includes('slide') && fileName.endsWith('.xml')) {
         const file = content.files[fileName];
         if (!file.dir) {
-          const xmlContent = await file.async('string');
+          let xmlContent = await file.async('string');
+          let fileModified = false;
           
-          // Chercher et remplacer {{REFS}}
-          if (xmlContent.includes('{{REFS}}')) {
-            console.log('🔄 [ENRICH-CV] Remplacement dans:', fileName);
-            const newContent = xmlContent.replace(/\{\{REFS\}\}/g, refsText);
-            content.file(fileName, newContent);
+          console.log(`📄 [ENRICH-CV] Traitement de ${fileName}`);
+          
+          // Remplacement individuel pour chaque type de placeholder
+          const placeholderTypes = ['REF_RESIDENCE', 'REF_MOA', 'REF_MONTANT', 'REF_TRAVAUX', 'REF_REALISATION'];
+          
+          placeholderTypes.forEach(placeholder => {
+            const placeholderPattern = new RegExp(`\\{\\{${placeholder}\\}\\}`, 'g');
+            const matches = xmlContent.match(placeholderPattern);
+            
+            if (matches) {
+              console.log(`   🎯 [${placeholder}] ${matches.length} occurrences trouvées`);
+              
+              // Remplacer chaque occurrence par une référence différente
+              let refIndex = 0;
+              xmlContent = xmlContent.replace(placeholderPattern, () => {
+                if (refIndex < references.length) {
+                  const ref = references[refIndex];
+                  let value = '';
+                  
+                  switch(placeholder) {
+                    case 'REF_RESIDENCE':
+                      value = ref.nom_projet || ref.residence || `Projet ${refIndex + 1}`;
+                      break;
+                    case 'REF_MOA':
+                      value = ref.client || ref.moa || 'Client non spécifié';
+                      break;
+                    case 'REF_MONTANT':
+                      value = ref.montant ? `${ref.montant.toLocaleString()} €` : 'Non spécifié';
+                      break;
+                    case 'REF_TRAVAUX':
+                      value = ref.type_mission || ref.travaux || 'Mission non spécifiée';
+                      break;
+                    case 'REF_REALISATION':
+                      value = ref.annee || ref.realisation || 'Année non spécifiée';
+                      break;
+                    default:
+                      value = 'Donnée non spécifiée';
+                  }
+                  
+                  console.log(`     → Remplacement ${refIndex + 1}: ${placeholder} = "${value}"`);
+                  refIndex++;
+                  return value;
+                } else {
+                  // Si plus de placeholders que de références, laisser vide
+                  console.log(`     → Remplacement vide: ${placeholder} (pas assez de références)`);
+                  return '';
+                }
+              });
+              
+              fileModified = true;
+            }
+          });
+          
+          if (fileModified) {
+            content.file(fileName, xmlContent);
             replacements++;
+            console.log(`   ✅ Fichier ${fileName} modifié`);
           }
         }
       }
     }
+    
+    console.log('✅ [ENRICH-CV] Remplacement individuel terminé');
+    console.log(`📊 [ENRICH-CV] ${references.length} références utilisées pour les placeholders`);
     
     console.log('✅ [ENRICH-CV] Remplacements effectués:', replacements, 'fichiers modifiés');
     
