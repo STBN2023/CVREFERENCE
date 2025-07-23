@@ -28,6 +28,229 @@ function safeFilename(filename) {
   return filename.replace(/[^a-zA-Z0-9._-]/g, '_');
 }
 
+// ===== FONCTION CORRIGÉE : REMPLACEMENT PAR SHAPE SPÉCIFIQUE =====
+async function remplacerPlaceholdersParShape(content, references) {
+  console.log('🔄 [REMPLACEMENT] Début du remplacement par shape nommée');
+  console.log(`📊 [REMPLACEMENT] ${references.length} références à traiter`);
+  
+  const files = Object.keys(content.files);
+  let replacements = 0;
+  
+  for (const fileName of files) {
+    if (fileName.includes('slide') && fileName.endsWith('.xml')) {
+      const file = content.files[fileName];
+      if (!file.dir) {
+        let xmlContent = await file.async('string');
+        let fileModified = false;
+        
+        console.log(`📄 [REMPLACEMENT] Traitement de ${fileName}`);
+        
+        // Pour chaque référence, traiter la shape correspondante
+        for (let refIndex = 0; refIndex < Math.min(references.length, 5); refIndex++) {
+          const shapeName = `reference_${refIndex + 1}`;
+          const ref = references[refIndex];
+          
+          console.log(`   🎯 [REMPLACEMENT] Traitement de ${shapeName} avec référence ${refIndex + 1}`);
+          console.log(`   📋 [REMPLACEMENT] Données: ${ref.nom_projet || ref.residence} - ${ref.client || ref.moa}`);
+          
+          // Pattern plus précis pour isoler une shape spécifique
+          const shapePattern = new RegExp(
+            `(<p:sp[\\s\\S]*?<p:cNvPr[^>]*name="${shapeName}"[\\s\\S]*?<\\/p:sp>)`,
+            'g'
+          );
+          
+          let shapeMatch = shapePattern.exec(xmlContent);
+          if (shapeMatch) {
+            console.log(`     ✅ [REMPLACEMENT] Shape ${shapeName} trouvée`);
+            
+            let shapeContent = shapeMatch[1];
+            let originalShapeContent = shapeContent;
+            
+            // Remplacer tous les placeholders dans cette shape spécifique
+            const residence = ref.nom_projet || ref.residence || `Projet ${refIndex + 1}`;
+            const moa = ref.client || ref.moa || 'Client non spécifié';
+            const montant = ref.montant ? `${ref.montant.toLocaleString()} €` : 'Non spécifié';
+            const travaux = ref.type_mission || ref.travaux || 'Mission non spécifiée';
+            const realisation = ref.annee || ref.realisation || 'Année non spécifiée';
+            
+            shapeContent = shapeContent.replace(/\{\{REF_RESIDENCE\}\}/g, residence);
+            shapeContent = shapeContent.replace(/\{\{REF_MOA\}\}/g, moa);
+            shapeContent = shapeContent.replace(/\{\{REF_MONTANT\}\}/g, montant);
+            shapeContent = shapeContent.replace(/\{\{REF_TRAVAUX\}\}/g, travaux);
+            shapeContent = shapeContent.replace(/\{\{REF_REALISATION\}\}/g, realisation);
+            
+            console.log(`       → REF_RESIDENCE = "${residence}"`);
+            console.log(`       → REF_MOA = "${moa}"`);
+            console.log(`       → REF_MONTANT = "${montant}"`);
+            console.log(`       → REF_TRAVAUX = "${travaux}"`);
+            console.log(`       → REF_REALISATION = "${realisation}"`);
+            
+            // Remplacer la shape originale par la shape modifiée
+            xmlContent = xmlContent.replace(originalShapeContent, shapeContent);
+            
+            fileModified = true;
+            replacements++;
+            console.log(`     ✅ [REMPLACEMENT] Shape ${shapeName} mise à jour`);
+          } else {
+            console.log(`     ⚠️ [REMPLACEMENT] Shape ${shapeName} non trouvée dans ${fileName}`);
+          }
+        }
+        
+        if (fileModified) {
+          content.file(fileName, xmlContent);
+          console.log(`   ✅ Fichier ${fileName} modifié`);
+        }
+      }
+    }
+  }
+  
+  console.log(`✅ [REMPLACEMENT] ${replacements} shapes mises à jour au total`);
+  return replacements;
+}
+
+// ===== FONCTION ALTERNATIVE : MASQUAGE PAR SUPPRESSION DE CONTENU =====
+async function masquerShapesParSuppressionContenu(content, references) {
+  console.log('🎭 [MASQUAGE-SIMPLE] Suppression du contenu des shapes vides');
+  
+  const files = Object.keys(content.files);
+  let shapesVidees = 0;
+  
+  for (const fileName of files) {
+    if (fileName.includes('slide') && fileName.endsWith('.xml')) {
+      const file = content.files[fileName];
+      if (!file.dir) {
+        let xmlContent = await file.async('string');
+        let fileModified = false;
+        
+        // Pour chaque shape de référence vide
+        for (let i = references.length + 1; i <= 5; i++) {
+          // Pattern pour trouver tout le contenu texte d'une shape spécifique
+          const textContentPattern = new RegExp(
+            `(<p:sp[\\s\\S]*?<p:cNvPr[^>]*name="reference_${i}"[\\s\\S]*?<p:txBody>)([\\s\\S]*?)(<\\/p:txBody>[\\s\\S]*?<\\/p:sp>)`,
+            'g'
+          );
+          
+          if (textContentPattern.test(xmlContent)) {
+            console.log(`   🗑️ [MASQUAGE-SIMPLE] Vidage de reference_${i}`);
+            
+            // Remplacer tout le contenu texte par un contenu vide
+            xmlContent = xmlContent.replace(textContentPattern, (match, before, textContent, after) => {
+              return `${before}<a:bodyPr/><a:lstStyle/><a:p><a:endParaRPr/></a:p>${after}`;
+            });
+            
+            fileModified = true;
+            shapesVidees++;
+          }
+        }
+        
+        if (fileModified) {
+          content.file(fileName, xmlContent);
+        }
+      }
+    }
+  }
+  
+  console.log(`✅ [MASQUAGE-SIMPLE] ${shapesVidees} shapes vidées`);
+  return shapesVidees;
+}
+
+// ===== FONCTION DE DEBUG APPROFONDI =====
+async function debugCompletStructure(content) {
+  console.log('\n🔍 [DEBUG] === ANALYSE COMPLÈTE DE LA STRUCTURE ===');
+  
+  const files = Object.keys(content.files);
+  
+  for (const fileName of files) {
+    if (fileName.includes('slide') && fileName.endsWith('.xml')) {
+      const file = content.files[fileName];
+      if (!file.dir) {
+        const xmlContent = await file.async('string');
+        
+        console.log(`\n📄 [DEBUG] ======= FICHIER: ${fileName} =======`);
+        
+        // 1. Chercher TOUS les noms de shapes
+        console.log('\n🎯 [DEBUG] TOUTES LES SHAPES TROUVÉES :');
+        const shapeNamePattern = /<p:cNvPr[^>]*name="([^"]*)"[^>]*>/g;
+        let match;
+        let shapeIndex = 1;
+        
+        while ((match = shapeNamePattern.exec(xmlContent)) !== null) {
+          console.log(`   ${shapeIndex}. "${match[1]}"`);
+          shapeIndex++;
+        }
+        
+        // 2. Chercher spécifiquement les shapes "reference_"
+        console.log('\n🔍 [DEBUG] SHAPES "reference_" TROUVÉES :');
+        const referenceShapePattern = /<p:cNvPr[^>]*name="(reference_[^"]*)"[^>]*>/g;
+        let refMatch;
+        let refFound = false;
+        
+        while ((refMatch = referenceShapePattern.exec(xmlContent)) !== null) {
+          console.log(`   ✅ Trouvé: "${refMatch[1]}"`);
+          refFound = true;
+        }
+        
+        if (!refFound) {
+          console.log('   ❌ AUCUNE shape "reference_" trouvée !');
+        }
+        
+        // 3. Chercher TOUS les placeholders
+        console.log('\n📋 [DEBUG] TOUS LES PLACEHOLDERS TROUVÉS :');
+        const placeholderPattern = /\{\{([^}]+)\}\}/g;
+        let placeholderMatch;
+        let placeholderIndex = 1;
+        
+        while ((placeholderMatch = placeholderPattern.exec(xmlContent)) !== null) {
+          console.log(`   ${placeholderIndex}. {{${placeholderMatch[1]}}}`);
+          placeholderIndex++;
+        }
+        
+        // 4. Chercher les placeholders spécifiques REF_
+        console.log('\n🎯 [DEBUG] PLACEHOLDERS "REF_" TROUVÉS :');
+        const refPlaceholderPattern = /\{\{(REF_[^}]+)\}\}/g;
+        let refPlaceholderMatch;
+        let refPlaceholderFound = false;
+        
+        while ((refPlaceholderMatch = refPlaceholderPattern.exec(xmlContent)) !== null) {
+          console.log(`   ✅ Trouvé: {{${refPlaceholderMatch[1]}}}`);
+          refPlaceholderFound = true;
+        }
+        
+        if (!refPlaceholderFound) {
+          console.log('   ❌ AUCUN placeholder "REF_" trouvé !');
+        }
+        
+        // 5. Extraire un échantillon du XML pour inspection manuelle
+        console.log('\n📄 [DEBUG] ÉCHANTILLON DU XML (premiers 500 caractères) :');
+        console.log(xmlContent.substring(0, 500) + '...');
+        
+        // 6. Chercher les structures p:txBody (zones de texte)
+        console.log('\n📝 [DEBUG] ZONES DE TEXTE TROUVÉES :');
+        const txBodyPattern = /<p:txBody[^>]*>([\s\S]*?)<\/p:txBody>/g;
+        let txBodyMatch;
+        let txBodyIndex = 1;
+        
+        while ((txBodyMatch = txBodyPattern.exec(xmlContent)) !== null) {
+          const textContent = txBodyMatch[1];
+          // Extraire le texte lisible
+          const textPattern = /<a:t[^>]*>(.*?)<\/a:t>/g;
+          let textMatch;
+          let extractedText = '';
+          
+          while ((textMatch = textPattern.exec(textContent)) !== null) {
+            extractedText += textMatch[1] + ' ';
+          }
+          
+          console.log(`   ${txBodyIndex}. Contenu: "${extractedText.trim()}"`);
+          txBodyIndex++;
+        }
+      }
+    }
+  }
+  
+  console.log('\n🔍 [DEBUG] === FIN DE L\'ANALYSE ===\n');
+}
+
 // ===== ENDPOINTS =====
 
 // Test de santé
@@ -77,6 +300,12 @@ app.post('/api/enrich-cv', upload.single('pptx'), async (req, res) => {
     try {
       references = JSON.parse(req.body.references || '[]');
       console.log('📋 [ENRICH-CV] Références parsées:', references.length, 'éléments');
+      if (references.length > 0) {
+        console.log('📋 [ENRICH-CV] Références reçues:');
+        references.forEach((ref, index) => {
+          console.log(`   ${index + 1}. ${ref.nom_projet || ref.residence} - ${ref.client || ref.moa}`);
+        });
+      }
     } catch (err) {
       console.error('❌ [ENRICH-CV] Erreur parsing JSON:', err.message);
       fs.unlinkSync(req.file.path);
@@ -89,85 +318,19 @@ app.post('/api/enrich-cv', upload.single('pptx'), async (req, res) => {
     const fileBuffer = fs.readFileSync(req.file.path);
     const content = await zip.loadAsync(fileBuffer);
     
-    // 4. Remplacement individuel des placeholders
-    console.log('🔄 [ENRICH-CV] Début du remplacement individuel des placeholders');
+    // 4. Remplacement par shape nommée (corrigé)
+    const replacements = await remplacerPlaceholdersParShape(content, references);
     
-    const files = Object.keys(content.files);
-    let replacements = 0;
+    console.log('✅ [ENRICH-CV] Remplacement par shape terminé');
+    console.log(`📊 [ENRICH-CV] ${references.length} références utilisées, ${replacements} shapes mises à jour`);
     
-    for (const fileName of files) {
-      if (fileName.includes('slide') && fileName.endsWith('.xml')) {
-        const file = content.files[fileName];
-        if (!file.dir) {
-          let xmlContent = await file.async('string');
-          let fileModified = false;
-          
-          console.log(`📄 [ENRICH-CV] Traitement de ${fileName}`);
-          
-          // Remplacement individuel pour chaque type de placeholder
-          const placeholderTypes = ['REF_RESIDENCE', 'REF_MOA', 'REF_MONTANT', 'REF_TRAVAUX', 'REF_REALISATION'];
-          
-          placeholderTypes.forEach(placeholder => {
-            const placeholderPattern = new RegExp(`\\{\\{${placeholder}\\}\\}`, 'g');
-            const matches = xmlContent.match(placeholderPattern);
-            
-            if (matches) {
-              console.log(`   🎯 [${placeholder}] ${matches.length} occurrences trouvées`);
-              
-              // Remplacer chaque occurrence par une référence différente
-              let refIndex = 0;
-              xmlContent = xmlContent.replace(placeholderPattern, () => {
-                if (refIndex < references.length) {
-                  const ref = references[refIndex];
-                  let value = '';
-                  
-                  switch(placeholder) {
-                    case 'REF_RESIDENCE':
-                      value = ref.nom_projet || ref.residence || `Projet ${refIndex + 1}`;
-                      break;
-                    case 'REF_MOA':
-                      value = ref.client || ref.moa || 'Client non spécifié';
-                      break;
-                    case 'REF_MONTANT':
-                      value = ref.montant ? `${ref.montant.toLocaleString()} €` : 'Non spécifié';
-                      break;
-                    case 'REF_TRAVAUX':
-                      value = ref.type_mission || ref.travaux || 'Mission non spécifiée';
-                      break;
-                    case 'REF_REALISATION':
-                      value = ref.annee || ref.realisation || 'Année non spécifiée';
-                      break;
-                    default:
-                      value = 'Donnée non spécifiée';
-                  }
-                  
-                  console.log(`     → Remplacement ${refIndex + 1}: ${placeholder} = "${value}"`);
-                  refIndex++;
-                  return value;
-                } else {
-                  // Si plus de placeholders que de références, laisser vide
-                  console.log(`     → Remplacement vide: ${placeholder} (pas assez de références)`);
-                  return '';
-                }
-              });
-              
-              fileModified = true;
-            }
-          });
-          
-          if (fileModified) {
-            content.file(fileName, xmlContent);
-            replacements++;
-            console.log(`   ✅ Fichier ${fileName} modifié`);
-          }
-        }
-      }
+    // 5. Masquage des shapes vides (seulement si nécessaire)
+    let shapesMasquees = 0;
+    if (references.length < 5) {
+      shapesMasquees = await masquerShapesParSuppressionContenu(content, references);
+    } else {
+      console.log('🎭 [MASQUAGE] Aucun masquage nécessaire (5 références ou plus)');
     }
-    
-    console.log('✅ [ENRICH-CV] Remplacement individuel terminé');
-    console.log(`📊 [ENRICH-CV] ${references.length} références utilisées pour les placeholders`);
-    
-    console.log('✅ [ENRICH-CV] Remplacements effectués:', replacements, 'fichiers modifiés');
     
     // 6. Génération du fichier de sortie
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
@@ -189,6 +352,7 @@ app.post('/api/enrich-cv', upload.single('pptx'), async (req, res) => {
       downloadUrl: `/api/download/${outputFilename}`,
       referencesCount: references.length,
       replacements: replacements,
+      shapesMasquees: shapesMasquees,
       fileSize: outputBuffer.length
     };
     

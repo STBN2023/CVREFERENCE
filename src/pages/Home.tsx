@@ -8,7 +8,11 @@ const Home = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[hsl(var(--brand-lightblue))] to-[hsl(var(--brand-pale))]">
       <div className="bg-white/80 rounded-2xl shadow-xl p-10 flex flex-col items-center gap-8">
-        <h1 className="text-5xl font-extrabold text-[hsl(var(--brand-dark))] mb-2 drop-shadow">Bienvenue</h1>
+        <div className="flex items-center justify-center gap-6">
+          <img src="/logo bleu.png" alt="Logo Bleu" className="h-16" />
+          <h1 className="text-5xl font-extrabold text-[hsl(var(--brand-dark))] drop-shadow">Bienvenue</h1>
+          <img src="/logo jaune.png" alt="Logo Jaune" className="h-16" />
+        </div>
         <p className="text-lg text-[hsl(var(--brand-dark))/0.8] mb-4 text-center max-w-md">
           Lancez la constitution d’équipe et la sélection de références, ou accédez aux paramètres administrateur.
         </p>
