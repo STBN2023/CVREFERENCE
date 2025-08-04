@@ -150,7 +150,7 @@ export const RecapStep = () => {
           // Envoyer la requête
           const apiUrl = process.env.NODE_ENV === 'production' 
             ? '/api/enrich-cv'
-            : 'http://localhost:4000/api/enrich-cv';
+            : 'http://localhost:4001/api/enrich-cv';
             
           const response = await fetch(apiUrl, {
             method: "POST",
@@ -210,7 +210,7 @@ export const RecapStep = () => {
     
     try {
       // Essayer de récupérer le template depuis le serveur
-      const response = await fetch("http://localhost:4000/template.pptx");
+      const response = await fetch("http://localhost:4001/template.pptx");
       
       if (!response.ok) {
         console.warn('⚠️ Template non trouvé, création d\'un fichier factice');
@@ -297,7 +297,7 @@ export const RecapStep = () => {
       // URL de l'API configurable
       const apiUrl = process.env.NODE_ENV === 'production' 
         ? '/api/enrich-cv'  // En production, utiliser l'URL relative
-        : 'http://localhost:4000/api/enrich-cv'; // En dev, utiliser localhost
+        : 'http://localhost:4001/api/enrich-cv'; // En dev, utiliser localhost
       
       console.log('🌐 Envoi de la requête...');
       console.log('🚀 URL:', apiUrl);

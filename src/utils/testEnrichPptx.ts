@@ -20,7 +20,7 @@ export async function testEnrichPptx() {
   ];
 
   // Récupère le fichier test.pptx depuis le backend
-  const pptxRes = await fetch("http://localhost:4000/api/test-pptx");
+  const pptxRes = await fetch("http://localhost:4001/api/test-pptx");
   if (!pptxRes.ok) {
     alert("Impossible de récupérer test.pptx depuis le backend.");
     return;
@@ -34,7 +34,7 @@ export async function testEnrichPptx() {
   formData.append("references", JSON.stringify(references));
 
   // Envoie au backend pour enrichissement
-  const enrichRes = await fetch("http://localhost:4000/api/enrich-cv", {
+  const enrichRes = await fetch("http://localhost:4001/api/enrich-cv", {
     method: "POST",
     body: formData,
   });

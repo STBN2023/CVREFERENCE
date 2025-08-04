@@ -6,7 +6,7 @@ const JSZip = require('jszip');
 const cors = require('cors');
 
 const app = express();
-const PORT = 4000;
+const PORT = 4001; // Changé de 4000 à 4001 pour éviter les conflits de port
 
 // Middleware
 app.use(cors());
@@ -53,9 +53,15 @@ async function remplacerPlaceholdersParShape(content, references) {
           console.log(`   🎯 [REMPLACEMENT] Traitement de ${shapeName} avec référence ${refIndex + 1}`);
           console.log(`   📋 [REMPLACEMENT] Données: ${ref.nom_projet || ref.residence} - ${ref.client || ref.moa}`);
           
+          // Débogage spécifique pour reference_2
+          if (shapeName === 'reference_2') {
+            console.log(`   🐛 [DEBUG] Contenu complet de reference_2 avant traitement:`);
+            console.log(`   🐛 [DEBUG] ${shapeName} - Longueur:`, xmlContent.length);
+          }
+          
           // Pattern plus précis pour isoler une shape spécifique
           const shapePattern = new RegExp(
-            `(<p:sp[\\s\\S]*?<p:cNvPr[^>]*name="${shapeName}"[\\s\\S]*?<\\/p:sp>)`,
+            `(<p:sp[\\s\\S]*?<p:cNvPr[^>]*name="${shapeName}"[\\s\\S]*?</p:sp>)`,
             'g'
           );
           
@@ -66,6 +72,14 @@ async function remplacerPlaceholdersParShape(content, references) {
             let shapeContent = shapeMatch[1];
             let originalShapeContent = shapeContent;
             
+            // Débogage spécifique pour reference_2
+            if (shapeName === 'reference_2') {
+              console.log(`   🐛 [DEBUG] Shape reference_2 trouvée. Longueur:`, shapeContent.length);
+              // Afficher un extrait du contenu pour débogage
+              const excerpt = shapeContent.substring(0, Math.min(500, shapeContent.length));
+              console.log(`   🐛 [DEBUG] Extrait de reference_2:`, excerpt);
+            }
+            
             // Remplacer tous les placeholders dans cette shape spécifique
             const residence = ref.nom_projet || ref.residence || `Projet ${refIndex + 1}`;
             const moa = ref.client || ref.moa || 'Client non spécifié';
@@ -73,26 +87,70 @@ async function remplacerPlaceholdersParShape(content, references) {
             const travaux = ref.type_mission || ref.travaux || 'Mission non spécifiée';
             const realisation = ref.annee || ref.realisation || 'Année non spécifiée';
             
+            // Log pour débogage - vérifier avant remplacement
+            console.log(`       🔍 Avant remplacement dans shape ${shapeName}:`);
+            console.log(`          {{REF_RESIDENCE}}: ${residence}`);
+            console.log(`          {{REF_MOA}}: ${moa}`);
+            console.log(`          {{REF_MONTANT}}: ${montant}`);
+            console.log(`          {{REF_TRAVAUX}}: ${travaux}`);
+            console.log(`          {{REF_REALISATION}}: ${realisation}`);
+            
+            // Compter les placeholders avant remplacement
+            const residenceCount = (shapeContent.match(/\{\{REF_RESIDENCE\}\}/g) || []).length;
+            const moaCount = (shapeContent.match(/\{\{REF_MOA\}\}/g) || []).length;
+            const montantCount = (shapeContent.match(/\{\{REF_MONTANT\}\}/g) || []).length;
+            const travauxCount = (shapeContent.match(/\{\{REF_TRAVAUX\}\}/g) || []).length;
+            const realisationCount = (shapeContent.match(/\{\{REF_REALISATION\}\}/g) || []).length;
+            
+            console.log(`       📊 Placeholders trouvés dans ${shapeName}:`);
+            console.log(`          {{REF_RESIDENCE}}: ${residenceCount}`);
+            console.log(`          {{REF_MOA}}: ${moaCount}`);
+            console.log(`          {{REF_MONTANT}}: ${montantCount}`);
+            console.log(`          {{REF_TRAVAUX}}: ${travauxCount}`);
+            console.log(`          {{REF_REALISATION}}: ${realisationCount}`);
+            
+            // Remplacer TOUS les placeholders (y compris les doublons)
             shapeContent = shapeContent.replace(/\{\{REF_RESIDENCE\}\}/g, residence);
             shapeContent = shapeContent.replace(/\{\{REF_MOA\}\}/g, moa);
             shapeContent = shapeContent.replace(/\{\{REF_MONTANT\}\}/g, montant);
             shapeContent = shapeContent.replace(/\{\{REF_TRAVAUX\}\}/g, travaux);
             shapeContent = shapeContent.replace(/\{\{REF_REALISATION\}\}/g, realisation);
             
-            console.log(`       → REF_RESIDENCE = "${residence}"`);
-            console.log(`       → REF_MOA = "${moa}"`);
-            console.log(`       → REF_MONTANT = "${montant}"`);
-            console.log(`       → REF_TRAVAUX = "${travaux}"`);
-            console.log(`       → REF_REALISATION = "${realisation}"`);
+            // Log pour débogage - vérifier après remplacement
+            console.log(`       🔍 Après remplacement dans shape ${shapeName}:`);
+            if (shapeContent.includes('{{REF_RESIDENCE}}')) console.log(`          ⚠️  {{REF_RESIDENCE}} toujours présent`);
+            if (shapeContent.includes('{{REF_MOA}}')) console.log(`          ⚠️  {{REF_MOA}} toujours présent`);
+            if (shapeContent.includes('{{REF_MONTANT}}')) console.log(`          ⚠️  {{REF_MONTANT}} toujours présent`);
+            if (shapeContent.includes('{{REF_TRAVAUX}}')) console.log(`          ⚠️  {{REF_TRAVAUX}} toujours présent`);
+            if (shapeContent.includes('{{REF_REALISATION}}')) console.log(`          ⚠️  {{REF_REALISATION}} toujours présent`);
             
-            // Remplacer la shape originale par la shape modifiée
-            xmlContent = xmlContent.replace(originalShapeContent, shapeContent);
+            // Vérifier si le contenu a changé
+            if (shapeContent !== originalShapeContent) {
+              console.log(`     ✅ [REMPLACEMENT] Contenu modifié pour ${shapeName}`);
+              replacements++;
+              fileModified = true;
+              
+              // Remplacer dans le contenu XML
+              xmlContent = xmlContent.replace(originalShapeContent, shapeContent);
+            } else {
+              console.log(`     ⚠️  [REMPLACEMENT] Aucun changement pour ${shapeName}`);
+            }
             
-            fileModified = true;
-            replacements++;
             console.log(`     ✅ [REMPLACEMENT] Shape ${shapeName} mise à jour`);
           } else {
             console.log(`     ⚠️ [REMPLACEMENT] Shape ${shapeName} non trouvée dans ${fileName}`);
+            // Débogage spécifique pour reference_2
+            if (shapeName === 'reference_2') {
+              console.log(`   🐛 [DEBUG] Shape reference_2 NON TROUVÉE`);
+              // Chercher toutes les shapes dans le fichier pour débogage
+              const allShapesPattern = /<p:cNvPr[^>]*name="([^"]*)"/g;
+              let match;
+              const foundShapes = [];
+              while ((match = allShapesPattern.exec(xmlContent)) !== null) {
+                foundShapes.push(match[1]);
+              }
+              console.log(`   🐛 [DEBUG] Toutes les shapes trouvées:`, foundShapes.filter(s => s.includes('reference')));
+            }
           }
         }
         
@@ -140,6 +198,8 @@ async function masquerShapesParSuppressionContenu(content, references) {
             
             fileModified = true;
             shapesVidees++;
+          } else {
+            console.log(`   ℹ️ [MASQUAGE-SIMPLE] reference_${i} non trouvée`);
           }
         }
         

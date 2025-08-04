@@ -288,12 +288,12 @@ function Admin() {
     setLoadingTest(true);
     try {
       // 1. Vérifie que le backend répond
-      const backendUrl = "http://localhost:4000";
+      const backendUrl = "http://localhost:4001";
       let res;
       try {
         res = await fetch(backendUrl + "/api/test-pptx", { method: "HEAD" });
       } catch (err) {
-        showError("Le backend ne répond pas sur http://localhost:4000");
+        showError("Le backend ne répond pas sur http://localhost:4001");
         console.error("[DEBUG] Backend unreachable:", err);
         setLoadingTest(false);
         return;

@@ -23,7 +23,7 @@ const Downloads = () => {
       // URL de l'API configurable
       const apiUrl = process.env.NODE_ENV === 'production' 
         ? '/api/downloads'  // En production, utiliser l'URL relative
-        : 'http://localhost:4000/api/downloads'; // En dev, utiliser localhost
+        : 'http://localhost:4001/api/downloads'; // En dev, utiliser localhost
       
       console.log('🔄 Chargement des fichiers depuis:', apiUrl);
       console.log('🌍 Environnement:', process.env.NODE_ENV);
@@ -70,7 +70,7 @@ const Downloads = () => {
       // URL de l'API configurable
       const apiUrl = process.env.NODE_ENV === 'production' 
         ? `/api/download/${encodeURIComponent(filename)}`
-        : `http://localhost:4000/api/download/${encodeURIComponent(filename)}`;
+        : `http://localhost:4001/api/download/${encodeURIComponent(filename)}`;
       
       console.log('📎 Téléchargement depuis:', apiUrl);
       const response = await fetch(apiUrl);
@@ -120,7 +120,7 @@ const Downloads = () => {
       // URL de l'API configurable
       const apiUrl = process.env.NODE_ENV === 'production' 
         ? `/api/download/${encodeURIComponent(filename)}`
-        : `http://localhost:4000/api/download/${encodeURIComponent(filename)}`;
+        : `http://localhost:4001/api/download/${encodeURIComponent(filename)}`;
       
       console.log('🗑️ Suppression depuis:', apiUrl);
       const response = await fetch(apiUrl, {
