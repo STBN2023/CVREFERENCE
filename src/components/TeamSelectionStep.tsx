@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { FilterChips } from "./FilterChips";
 import { EmployeeCard, Employee } from "./EmployeeCard";
 import { TeamCounter } from "./TeamCounter";
@@ -8,20 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { useWorkflow } from "./WorkflowContext";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 
-const AGENCIES = ["Paris", "Lyon", "Marseille"];
-const FUNCTIONS = ["Développeur", "Designer", "Chef de projet"];
-const LEVELS = ["Junior", "Confirmé", "Senior"];
-
-const EMPLOYEES: Employee[] = [
-  { id: "1", name: "Alice Martin", agency: "Paris", function: "Développeur", level: "Senior" },
-  { id: "2", name: "Benoit Dubois", agency: "Lyon", function: "Designer", level: "Confirmé" },
-  { id: "3", name: "Claire Leroy", agency: "Marseille", function: "Chef de projet", level: "Senior" },
-  { id: "4", name: "David Morel", agency: "Paris", function: "Développeur", level: "Junior" },
-  { id: "5", name: "Emma Bernard", agency: "Lyon", function: "Développeur", level: "Confirmé" },
-  { id: "6", name: "Fabrice Petit", agency: "Marseille", function: "Designer", level: "Junior" },
-];
-
-export { EMPLOYEES };
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
 
 export const TeamSelectionStep = () => {
   const [selectedAgencies, setSelectedAgencies] = useState<string[]>([]);
@@ -29,16 +16,67 @@ export const TeamSelectionStep = () => {
   const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [openReset, setOpenReset] = useState(false);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [agencies, setAgencies] = useState<string[]>([]);
+  const [functions, setFunctions] = useState<string[]>([]);
+  const [levels, setLevels] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { setSelectedTeam } = useWorkflow();
 
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [salariesResponse, agencesResponse, fonctionsResponse, niveauxResponse] = await Promise.all([
+          fetch(`${BACKEND_URL}/api/salaries`),
+          fetch(`${BACKEND_URL}/api/agences`),
+          fetch(`${BACKEND_URL}/api/fonctions`),
+          fetch(`${BACKEND_URL}/api/niveaux`),
+        ]);
+
+        if (!salariesResponse.ok || !agencesResponse.ok || !fonctionsResponse.ok || !niveauxResponse.ok) {
+          throw new Error(`Erreur HTTP lors du chargement des données de référence`);
+        }
+
+        const salariesData = await salariesResponse.json();
+        const agencesData = await agencesResponse.json();
+        const fonctionsData = await fonctionsResponse.json();
+        const niveauxData = await niveauxResponse.json();
+
+        const employeesFormatted = salariesData.salaries.map((salary: any) => ({
+          id: salary.id_salarie.toString(),
+          name: `${salary.prenom} ${salary.nom}`,
+          agency: salary.agence,
+          function: salary.fonction,
+          level: salary.niveau_expertise,
+        }));
+        setEmployees(employeesFormatted);
+
+        // Utiliser les données des référentiels pour les filtres (uniquement les actifs)
+        setAgencies(agencesData.agences.filter((a: any) => a.actif).map((a: any) => a.nom));
+        setFunctions(fonctionsData.fonctions.filter((f: any) => f.actif).map((f: any) => f.nom));
+        setLevels(niveauxData.niveaux.filter((n: any) => n.actif).map((n: any) => n.nom));
+
+      } catch (err) {
+        console.error('Erreur lors du chargement des données:', err);
+        setError('Impossible de charger les données des référentiels ou des salariés.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   const filteredEmployees = useMemo(() => {
-    return EMPLOYEES.filter((e) =>
+    return employees.filter((e) =>
       (selectedAgencies.length === 0 || selectedAgencies.includes(e.agency)) &&
       (selectedFunctions.length === 0 || selectedFunctions.includes(e.function)) &&
       (selectedLevels.length === 0 || selectedLevels.includes(e.level))
     );
-  }, [selectedAgencies, selectedFunctions, selectedLevels]);
+  }, [employees, selectedAgencies, selectedFunctions, selectedLevels]);
 
   const handleSelect = (id: string) => {
     setSelectedIds((prev) =>
@@ -62,6 +100,27 @@ export const TeamSelectionStep = () => {
     }, 600);
   };
 
+  if (loading) {
+    return (
+      <div className="max-w-5xl mx-auto py-10 px-2 bg-[hsl(var(--brand-lightblue))] min-h-screen">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-blue"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-5xl mx-auto py-10 px-2 bg-[hsl(var(--brand-lightblue))] min-h-screen">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+          <strong className="font-bold">Erreur : </strong>
+          <span className="block sm:inline">{error}</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-5xl mx-auto py-10 px-2 bg-[hsl(var(--brand-lightblue))] min-h-screen">
       <h2 className="text-4xl font-extrabold mb-10 text-center text-[hsl(var(--brand-dark))] tracking-tight drop-shadow-sm">
@@ -70,7 +129,7 @@ export const TeamSelectionStep = () => {
       <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-center md:gap-8">
         <div className="flex-1">
           <FilterChips
-            options={AGENCIES}
+            options={agencies}
             selected={selectedAgencies}
             onChange={setSelectedAgencies}
             label="Agence"
@@ -78,7 +137,7 @@ export const TeamSelectionStep = () => {
         </div>
         <div className="flex-1">
           <FilterChips
-            options={FUNCTIONS}
+            options={functions}
             selected={selectedFunctions}
             onChange={setSelectedFunctions}
             label="Fonction"
@@ -86,7 +145,7 @@ export const TeamSelectionStep = () => {
         </div>
         <div className="flex-1">
           <FilterChips
-            options={LEVELS}
+            options={levels}
             selected={selectedLevels}
             onChange={setSelectedLevels}
             label="Niveau"

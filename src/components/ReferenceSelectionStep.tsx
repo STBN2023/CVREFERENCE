@@ -1,9 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { showSuccess } from "@/utils/toast";
 import { useWorkflow } from "./WorkflowContext";
 import { useNavigate } from "react-router-dom";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
+
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
 
 type Reference = {
   id: string;
@@ -16,52 +18,7 @@ type Reference = {
   description_projet: string;
 };
 
-const MOCK_REFERENCES: Reference[] = [
-  {
-    id: "1",
-    nom_projet: "Tour Majunga",
-    ville: "Paris",
-    annee: 2021,
-    type_mission: "Construction",
-    montant: 12000000,
-    client: "Société Générale",
-    description_projet: "Construction d'une tour de bureaux de 45 étages.",
-  },
-  {
-    id: "2",
-    nom_projet: "Hôpital Sud",
-    ville: "Lyon",
-    annee: 2019,
-    type_mission: "Rénovation",
-    montant: 8000000,
-    client: "CHU Lyon",
-    description_projet: "Rénovation complète du pôle maternité.",
-  },
-  {
-    id: "3",
-    nom_projet: "Campus Innovation",
-    ville: "Toulouse",
-    annee: 2022,
-    type_mission: "Extension",
-    montant: 5000000,
-    client: "Université Toulouse",
-    description_projet: "Extension du campus universitaire avec laboratoires.",
-  },
-  {
-    id: "4",
-    nom_projet: "EcoQuartier Nord",
-    ville: "Lille",
-    annee: 2020,
-    type_mission: "Construction",
-    montant: 9500000,
-    client: "Ville de Lille",
-    description_projet: "Création d'un écoquartier de 200 logements.",
-  },
-];
-
-const VILLES = ["Paris", "Lyon", "Toulouse", "Lille"];
-const TYPES = ["Construction", "Rénovation", "Extension"];
-const ANNEES = [2022, 2021, 2020, 2019];
+// Les données sont maintenant chargées depuis l'API
 
 export const ReferenceSelectionStep = () => {
   const [selectedVilles, setSelectedVilles] = useState<string[]>([]);
@@ -74,15 +31,63 @@ export const ReferenceSelectionStep = () => {
   const { setSelectedReferences } = useWorkflow();
   const navigate = useNavigate();
 
+  // États pour les données chargées depuis l'API
+  const [references, setReferences] = useState<Reference[]>([]);
+  const [villes, setVilles] = useState<string[]>([]);
+  const [types, setTypes] = useState<string[]>([]);
+  const [annees, setAnnees] = useState<number[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Chargement des données depuis l'API
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        
+        // Charger les références
+        const referencesResponse = await fetch(`${BACKEND_URL}/api/references`);
+        if (referencesResponse.ok) {
+          const referencesData = await referencesResponse.json();
+          const formattedReferences = referencesData.references.map((ref: any) => ({
+            id: ref.id_reference.toString(),
+            nom_projet: ref.nom_projet,
+            ville: ref.ville,
+            annee: ref.annee,
+            type_mission: ref.type_mission,
+            montant: ref.montant,
+            client: ref.client,
+            description_projet: ref.description_projet
+          }));
+          setReferences(formattedReferences);
+          
+          // Extraire les valeurs uniques pour les filtres
+          const uniqueVilles = [...new Set(formattedReferences.map((ref: Reference) => ref.ville))].sort() as string[];
+          const uniqueTypes = [...new Set(formattedReferences.map((ref: Reference) => ref.type_mission))].sort() as string[];
+          const uniqueAnnees = [...new Set(formattedReferences.map((ref: Reference) => ref.annee))].sort((a: number, b: number) => b - a) as number[];
+          
+          setVilles(uniqueVilles);
+          setTypes(uniqueTypes);
+          setAnnees(uniqueAnnees);
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des références:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
   const filteredReferences = useMemo(() => {
-    return MOCK_REFERENCES.filter((ref) =>
+    return references.filter((ref) =>
       (selectedVilles.length === 0 || selectedVilles.includes(ref.ville)) &&
       (selectedTypes.length === 0 || selectedTypes.includes(ref.type_mission)) &&
       (selectedAnnees.length === 0 || selectedAnnees.includes(ref.annee)) &&
-      (montantMin === "" || ref.montant >= montantMin) &&
-      (montantMax === "" || ref.montant <= montantMax)
+      (montantMin === "" || ref.montant >= (montantMin as number)) &&
+      (montantMax === "" || ref.montant <= (montantMax as number))
     );
-  }, [selectedVilles, selectedTypes, selectedAnnees, montantMin, montantMax]);
+  }, [references, selectedVilles, selectedTypes, selectedAnnees, montantMin, montantMax]);
 
   const handleSelect = (id: string) => {
     setSelectedIds((prev) =>
@@ -108,6 +113,17 @@ export const ReferenceSelectionStep = () => {
     }, 600);
   };
 
+  if (loading) {
+    return (
+      <div className="max-w-5xl mx-auto py-10 px-2">
+        <div className="text-center py-20">
+          <div className="text-2xl font-bold text-brand-dark mb-4">Chargement des références...</div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-blue mx-auto"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-5xl mx-auto py-10 px-2">
       <h2 className="text-4xl font-extrabold mb-10 text-center text-brand-dark tracking-tight drop-shadow-sm">
@@ -117,7 +133,7 @@ export const ReferenceSelectionStep = () => {
         <div>
           <div className="mb-2 text-sm font-semibold text-brand-dark">Ville</div>
           <div className="flex flex-wrap gap-2">
-            {VILLES.map((ville) => (
+            {villes.map((ville) => (
               <Button
                 key={ville}
                 variant={selectedVilles.includes(ville) ? "default" : "outline"}
@@ -144,7 +160,7 @@ export const ReferenceSelectionStep = () => {
         <div>
           <div className="mb-2 text-sm font-semibold text-brand-dark">Type de mission</div>
           <div className="flex flex-wrap gap-2">
-            {TYPES.map((type) => (
+            {types.map((type) => (
               <Button
                 key={type}
                 variant={selectedTypes.includes(type) ? "default" : "outline"}
@@ -171,7 +187,7 @@ export const ReferenceSelectionStep = () => {
         <div>
           <div className="mb-2 text-sm font-semibold text-brand-dark">Année</div>
           <div className="flex flex-wrap gap-2">
-            {ANNEES.map((annee) => (
+            {annees.map((annee) => (
               <Button
                 key={annee}
                 variant={selectedAnnees.includes(annee) ? "default" : "outline"}

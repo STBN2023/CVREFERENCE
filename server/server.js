@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const JSZip = require('jszip');
 const cors = require('cors');
+const dbManager = require('./database/database');
 
 const app = express();
 const PORT = 4000;
@@ -38,6 +39,290 @@ app.get('/api/test', (req, res) => {
     timestamp: new Date().toISOString(),
     message: 'Backend fonctionnel'
   });
+});
+
+// ===== ENDPOINTS BASE DE DONNÉES =====
+
+// Récupérer tous les salariés
+app.get('/api/salaries', async (req, res) => {
+  console.log('👥 [API] Récupération des salariés');
+  try {
+    const salaries = await dbManager.getAllSalaries();
+    console.log(`✅ [API] ${salaries.length} salariés trouvés`);
+    res.json({ salaries });
+  } catch (error) {
+    console.error('❌ [API] Erreur salariés:', error.message);
+    res.status(500).json({ error: 'Erreur lors de la récupération des salariés' });
+  }
+});
+
+// Récupérer toutes les références
+app.get('/api/references', async (req, res) => {
+  console.log('📋 [API] Récupération des références');
+  try {
+    const references = await dbManager.getAllReferences();
+    console.log(`✅ [API] ${references.length} références trouvées`);
+    res.json({ references });
+  } catch (error) {
+    console.error('❌ [API] Erreur références:', error.message);
+    res.status(500).json({ error: 'Erreur lors de la récupération des références' });
+  }
+});
+
+// Récupérer un salarié par ID
+app.get('/api/salaries/:id', async (req, res) => {
+  const { id } = req.params;
+  console.log(`👤 [API] Récupération salarié ID: ${id}`);
+  try {
+    const salarie = await dbManager.getSalarieById(id);
+    if (!salarie) {
+      return res.status(404).json({ error: 'Salarié non trouvé' });
+    }
+    res.json({ salarie });
+  } catch (error) {
+    console.error('❌ [API] Erreur salarié:', error.message);
+    res.status(500).json({ error: 'Erreur lors de la récupération du salarié' });
+  }
+});
+
+// Récupérer les références d'un salarié
+app.get('/api/salaries/:id/references', async (req, res) => {
+  const { id } = req.params;
+  console.log(`📋 [API] Récupération références salarié ID: ${id}`);
+  try {
+    const references = await dbManager.getReferencesBySalarie(id);
+    console.log(`✅ [API] ${references.length} références trouvées pour salarié ${id}`);
+    res.json({ references });
+  } catch (error) {
+    console.error('❌ [API] Erreur références salarié:', error.message);
+    res.status(500).json({ error: 'Erreur lors de la récupération des références' });
+  }
+});
+
+// Ajouter un nouveau salarié
+app.post('/api/salaries', async (req, res) => {
+  console.log('➕ [API] Ajout nouveau salarié');
+  try {
+    const result = await dbManager.addSalarie(req.body);
+    console.log(`✅ [API] Salarié ajouté avec ID: ${result.id}`);
+    res.status(201).json({ id: result.id, message: 'Salarié ajouté avec succès' });
+  } catch (error) {
+    console.error('❌ [API] Erreur ajout salarié:', error.message);
+    res.status(500).json({ error: 'Erreur lors de l\'ajout du salarié' });
+  }
+});
+
+// Ajouter une nouvelle référence
+app.post('/api/references', async (req, res) => {
+  console.log(' [API] Ajout nouvelle référence');
+  try {
+    const result = await dbManager.addReference(req.body);
+    console.log(` [API] Référence ajoutée avec ID: ${result.id}`);
+    res.status(201).json({ id: result.id, message: 'Référence ajoutée avec succès' });
+  } catch (error) {
+    console.error(' [API] Erreur ajout référence:', error.message);
+    res.status(500).json({ error: 'Erreur lors de l\'ajout de la référence' });
+  }
+});
+
+// Modifier un salarié existant
+app.put('/api/salaries/:id', async (req, res) => {
+  const { id } = req.params;
+  console.log(` [API] Modification salarié ID: ${id}`);
+  try {
+    const result = await dbManager.updateSalarie(id, req.body);
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Salarié non trouvé' });
+    }
+    console.log(` [API] Salarié ${id} modifié avec succès`);
+    res.json({ message: 'Salarié modifié avec succès' });
+  } catch (error) {
+    console.error(' [API] Erreur modification salarié:', error.message);
+    res.status(500).json({ error: 'Erreur lors de la modification du salarié' });
+  }
+});
+
+// Modifier une référence existante
+app.put('/api/references/:id', async (req, res) => {
+  const { id } = req.params;
+  console.log(` [API] Modification référence ID: ${id}`);
+  try {
+    const result = await dbManager.updateReference(id, req.body);
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Référence non trouvée' });
+    }
+    console.log(` [API] Référence ${id} modifiée avec succès`);
+    res.json({ message: 'Référence modifiée avec succès' });
+  } catch (error) {
+    console.error(' [API] Erreur modification référence:', error.message);
+    res.status(500).json({ error: 'Erreur lors de la modification de la référence' });
+  }
+});
+
+// ===================================
+// ENDPOINTS TABLES DE RÉFÉRENCE
+// ===================================
+
+// Récupérer toutes les agences
+app.get('/api/agences', async (req, res) => {
+  console.log('🏢 [API] Récupération des agences');
+  try {
+    const agences = await dbManager.getAgences();
+    console.log(`✅ [API] ${agences.length} agences trouvées`);
+    res.json({ agences });
+  } catch (error) {
+    console.error('❌ [API] Erreur agences:', error.message);
+    res.status(500).json({ error: 'Erreur lors de la récupération des agences' });
+  }
+});
+
+// Ajouter une nouvelle agence
+app.post('/api/agences', async (req, res) => {
+  console.log('➕ [API] Ajout nouvelle agence');
+  try {
+    const result = await dbManager.addAgence(req.body);
+    console.log(`✅ [API] Agence ajoutée avec ID: ${result.lastID}`);
+    res.status(201).json({ id: result.lastID, message: 'Agence ajoutée avec succès' });
+  } catch (error) {
+    console.error('❌ [API] Erreur ajout agence:', error.message);
+    res.status(500).json({ error: 'Erreur lors de l\'ajout de l\'agence' });
+  }
+});
+
+// Mettre à jour une agence
+app.put('/api/agences/:id', async (req, res) => {
+  const { id } = req.params;
+  console.log(`✏️ [API] Mise à jour agence ID: ${id}`);
+  try {
+    await dbManager.updateAgence(id, req.body);
+    console.log(`✅ [API] Agence ${id} mise à jour`);
+    res.json({ message: 'Agence mise à jour avec succès' });
+  } catch (error) {
+    console.error('❌ [API] Erreur mise à jour agence:', error.message);
+    res.status(500).json({ error: 'Erreur lors de la mise à jour de l\'agence' });
+  }
+});
+
+// Supprimer une agence
+app.delete('/api/agences/:id', async (req, res) => {
+  const { id } = req.params;
+  console.log(`🗑️ [API] Suppression agence ID: ${id}`);
+  try {
+    await dbManager.deleteAgence(id);
+    console.log(`✅ [API] Agence ${id} supprimée`);
+    res.json({ message: 'Agence supprimée avec succès' });
+  } catch (error) {
+    console.error('❌ [API] Erreur suppression agence:', error.message);
+    res.status(500).json({ error: 'Erreur lors de la suppression de l\'agence' });
+  }
+});
+
+// Récupérer toutes les fonctions
+app.get('/api/fonctions', async (req, res) => {
+  console.log('💼 [API] Récupération des fonctions');
+  try {
+    const fonctions = await dbManager.getFonctions();
+    console.log(`✅ [API] ${fonctions.length} fonctions trouvées`);
+    res.json({ fonctions });
+  } catch (error) {
+    console.error('❌ [API] Erreur fonctions:', error.message);
+    res.status(500).json({ error: 'Erreur lors de la récupération des fonctions' });
+  }
+});
+
+// Ajouter une nouvelle fonction
+app.post('/api/fonctions', async (req, res) => {
+  console.log('➕ [API] Ajout nouvelle fonction');
+  try {
+    const result = await dbManager.addFonction(req.body);
+    console.log(`✅ [API] Fonction ajoutée avec ID: ${result.lastID}`);
+    res.status(201).json({ id: result.lastID, message: 'Fonction ajoutée avec succès' });
+  } catch (error) {
+    console.error('❌ [API] Erreur ajout fonction:', error.message);
+    res.status(500).json({ error: 'Erreur lors de l\'ajout de la fonction' });
+  }
+});
+
+// Mettre à jour une fonction
+app.put('/api/fonctions/:id', async (req, res) => {
+  const { id } = req.params;
+  console.log(`✏️ [API] Mise à jour fonction ID: ${id}`);
+  try {
+    await dbManager.updateFonction(id, req.body);
+    console.log(`✅ [API] Fonction ${id} mise à jour`);
+    res.json({ message: 'Fonction mise à jour avec succès' });
+  } catch (error) {
+    console.error('❌ [API] Erreur mise à jour fonction:', error.message);
+    res.status(500).json({ error: 'Erreur lors de la mise à jour de la fonction' });
+  }
+});
+
+// Supprimer une fonction
+app.delete('/api/fonctions/:id', async (req, res) => {
+  const { id } = req.params;
+  console.log(`🗑️ [API] Suppression fonction ID: ${id}`);
+  try {
+    await dbManager.deleteFonction(id);
+    console.log(`✅ [API] Fonction ${id} supprimée`);
+    res.json({ message: 'Fonction supprimée avec succès' });
+  } catch (error) {
+    console.error('❌ [API] Erreur suppression fonction:', error.message);
+    res.status(500).json({ error: 'Erreur lors de la suppression de la fonction' });
+  }
+});
+
+// Récupérer tous les niveaux d'expertise
+app.get('/api/niveaux', async (req, res) => {
+  console.log('🎖️ [API] Récupération des niveaux d\'expertise');
+  try {
+    const niveaux = await dbManager.getNiveauxExpertise();
+    console.log(`✅ [API] ${niveaux.length} niveaux trouvés`);
+    res.json({ niveaux });
+  } catch (error) {
+    console.error('❌ [API] Erreur niveaux:', error.message);
+    res.status(500).json({ error: 'Erreur lors de la récupération des niveaux' });
+  }
+});
+
+// Ajouter un nouveau niveau d'expertise
+app.post('/api/niveaux', async (req, res) => {
+  console.log('➕ [API] Ajout nouveau niveau d\'expertise');
+  try {
+    const result = await dbManager.addNiveauExpertise(req.body);
+    console.log(`✅ [API] Niveau ajouté avec ID: ${result.lastID}`);
+    res.status(201).json({ id: result.lastID, message: 'Niveau ajouté avec succès' });
+  } catch (error) {
+    console.error('❌ [API] Erreur ajout niveau:', error.message);
+    res.status(500).json({ error: 'Erreur lors de l\'ajout du niveau' });
+  }
+});
+
+// Mettre à jour un niveau d'expertise
+app.put('/api/niveaux/:id', async (req, res) => {
+  const { id } = req.params;
+  console.log(`✏️ [API] Mise à jour niveau ID: ${id}`);
+  try {
+    await dbManager.updateNiveauExpertise(id, req.body);
+    console.log(`✅ [API] Niveau ${id} mis à jour`);
+    res.json({ message: 'Niveau mis à jour avec succès' });
+  } catch (error) {
+    console.error('❌ [API] Erreur mise à jour niveau:', error.message);
+    res.status(500).json({ error: 'Erreur lors de la mise à jour du niveau' });
+  }
+});
+
+// Supprimer un niveau d'expertise
+app.delete('/api/niveaux/:id', async (req, res) => {
+  const { id } = req.params;
+  console.log(`🗑️ [API] Suppression niveau ID: ${id}`);
+  try {
+    await dbManager.deleteNiveauExpertise(id);
+    console.log(`✅ [API] Niveau ${id} supprimé`);
+    res.json({ message: 'Niveau supprimé avec succès' });
+  } catch (error) {
+    console.error('❌ [API] Erreur suppression niveau:', error.message);
+    res.status(500).json({ error: 'Erreur lors de la suppression du niveau' });
+  }
 });
 
 // Servir le template PowerPoint
@@ -241,14 +526,29 @@ app.delete('/api/download/:filename', (req, res) => {
   }
 });
 
-// Démarrage du serveur
-app.listen(PORT, () => {
+// Démarrage du serveur avec initialisation de la base de données
+app.listen(PORT, async () => {
   console.log('\n🚀 ===== BACKEND CV ENRICHMENT =====');
   console.log(`🌐 Serveur démarré sur http://localhost:${PORT}`);
   console.log('📁 Dossier uploads:', uploadsDir);
   console.log('📁 Dossier downloads:', downloadsDir);
+  
+  // Initialiser la base de données
+  try {
+    await dbManager.initialize();
+  } catch (error) {
+    console.error('💥 [FATAL] Erreur initialisation base de données:', error);
+    process.exit(1);
+  }
+  
   console.log('📋 Endpoints disponibles:');
   console.log('   • GET  /api/test');
+  console.log('   • GET  /api/salaries');
+  console.log('   • GET  /api/references');
+  console.log('   • GET  /api/salaries/:id');
+  console.log('   • GET  /api/salaries/:id/references');
+  console.log('   • POST /api/salaries');
+  console.log('   • POST /api/references');
   console.log('   • GET  /template.pptx');
   console.log('   • POST /api/enrich-cv');
   console.log('   • GET  /api/downloads');

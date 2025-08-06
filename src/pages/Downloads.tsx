@@ -21,12 +21,12 @@ const Downloads = () => {
       setLoading(true);
       
       // URL de l'API configurable
-      const apiUrl = process.env.NODE_ENV === 'production' 
+      const apiUrl = import.meta.env.MODE === 'production' 
         ? '/api/downloads'  // En production, utiliser l'URL relative
         : 'http://localhost:4000/api/downloads'; // En dev, utiliser localhost
       
       console.log('🔄 Chargement des fichiers depuis:', apiUrl);
-      console.log('🌍 Environnement:', process.env.NODE_ENV);
+      console.log('🌍 Environnement:', import.meta.env.MODE);
       
       const response = await fetch(apiUrl);
       
@@ -68,7 +68,7 @@ const Downloads = () => {
     
     try {
       // URL de l'API configurable
-      const apiUrl = process.env.NODE_ENV === 'production' 
+      const apiUrl = import.meta.env.MODE === 'production' 
         ? `/api/download/${encodeURIComponent(filename)}`
         : `http://localhost:4000/api/download/${encodeURIComponent(filename)}`;
       
@@ -118,7 +118,7 @@ const Downloads = () => {
     
     try {
       // URL de l'API configurable
-      const apiUrl = process.env.NODE_ENV === 'production' 
+      const apiUrl = import.meta.env.MODE === 'production' 
         ? `/api/download/${encodeURIComponent(filename)}`
         : `http://localhost:4000/api/download/${encodeURIComponent(filename)}`;
       

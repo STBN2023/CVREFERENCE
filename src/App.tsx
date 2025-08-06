@@ -7,11 +7,12 @@ import Home from "./pages/Home";
 import TeamPage from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import ReferenceSelection from "./pages/ReferenceSelection";
-import Recap from "./pages/Recap";
+import Recap from "./pages/RecapNew";
 import Admin from "./pages/Admin";
 import { BurgerMenu } from "@/components/BurgerMenu";
 import ReferenceAssociation from "./pages/ReferenceAssociation";
 import Downloads from "./pages/Downloads";
+import Referentials from "./pages/Referentials";
 import { RainbowThemeButton } from "@/components/RainbowThemeButton";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/recap" element={<Recap />} />
           <Route path="/downloads" element={<Downloads />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/referentials" element={<Referentials />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

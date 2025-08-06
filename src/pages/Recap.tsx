@@ -1,5 +1,4 @@
 import { useWorkflow } from "@/components/WorkflowContext";
-import { EMPLOYEES } from "@/components/TeamSelectionStep";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -105,8 +104,9 @@ export const RecapStep = () => {
     }
   }, [selectedTeam, selectedReferences, navigate]);
 
-  const team = EMPLOYEES.filter((e) => selectedTeam.includes(e.id));
-  const references = MOCK_REFERENCES.filter((r) => selectedReferences.includes(r.id));
+  // Redirection vers RecapNew - ce fichier est obsolète
+  const team: any[] = [];
+  const references: any[] = [];
 
   const handleFinish = async () => {
     console.log('\n=== 🚀 GÉNÉRATION DE TOUS LES CV ===');

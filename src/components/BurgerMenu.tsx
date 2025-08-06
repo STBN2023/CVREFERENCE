@@ -10,6 +10,7 @@ const NAV_LINKS = [
   { to: "/recap", label: "Récapitulatif" },
   { to: "/downloads", label: "📁 Téléchargements" },
   { to: "/admin", label: "Admin" },
+  { to: "/referentials", label: "⚙️ Référentiels" },
 ];
 
 export const BurgerMenu = () => {

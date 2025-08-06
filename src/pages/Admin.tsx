@@ -1,4 +1,4 @@
-import { useState, ChangeEvent } from "react";
+import { useState, ChangeEvent, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,8 @@ import { showSuccess, showError } from "@/utils/toast";
 import { Trash2, UserPlus, FilePlus2, Users, Pencil, Download } from "lucide-react";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { testEnrichPptx } from "@/utils/testEnrichPptx";
+
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
 
 const CV_TEMPLATES = [
   { id: "classic", label: "Classique" },
@@ -41,9 +43,6 @@ type Reference = {
   salaries: string[];
 };
 
-const AGENCES = ["Paris", "Lyon", "Marseille", "Bordeaux", "Lille", "Toulouse"];
-const FONCTIONS = ["Architecte", "Ingénieur", "Chargé d'affaires", "Chef de projet", "Consultant", "Économiste"];
-const NIVEAUX = ["Junior", "Confirmé", "Senior", "Expert"];
 const TYPES_MISSION = ["Construction", "Rénovation", "Extension", "Audit", "Conseil"];
 
 const MOCK_SALARIES: Salarie[] = [
@@ -89,8 +88,92 @@ const MOCK_REFERENCES: Reference[] = [
 ];
 
 function Admin() {
-  const [salaries, setSalaries] = useState<Salarie[]>(MOCK_SALARIES);
-  const [references, setReferences] = useState<Reference[]>(MOCK_REFERENCES);
+  const [salaries, setSalaries] = useState<Salarie[]>([]);
+  const [references, setReferences] = useState<Reference[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  // États pour les référentiels dynamiques
+  const [agences, setAgences] = useState<string[]>([]);
+  const [fonctions, setFonctions] = useState<string[]>([]);
+  const [niveaux, setNiveaux] = useState<string[]>([]);
+
+  // Charger les données depuis l'API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [salariesResponse, referencesResponse, agencesResponse, fonctionsResponse, niveauxResponse] = await Promise.all([
+          fetch(`${BACKEND_URL}/api/salaries`),
+          fetch(`${BACKEND_URL}/api/references`),
+          fetch(`${BACKEND_URL}/api/agences`),
+          fetch(`${BACKEND_URL}/api/fonctions`),
+          fetch(`${BACKEND_URL}/api/niveaux`),
+        ]);
+
+        // Charger les salariés
+        if (salariesResponse.ok) {
+          const salariesData = await salariesResponse.json();
+          const salariesFormatted = salariesData.salaries.map((salary: any) => ({
+            id: salary.id_salarie.toString(),
+            nom: salary.nom,
+            prenom: salary.prenom,
+            agence: salary.agence,
+            fonction: salary.fonction,
+            niveau: salary.niveau_expertise,
+            actif: true, // Par défaut
+            template: 'classic' // Par défaut
+          }));
+          setSalaries(salariesFormatted);
+        }
+
+        // Charger les références
+        if (referencesResponse.ok) {
+          const referencesData = await referencesResponse.json();
+          const referencesFormatted = referencesData.references.map((ref: any) => ({
+            id: ref.id_reference.toString(),
+            nom_projet: ref.nom_projet,
+            client: ref.client,
+            ville: ref.ville,
+            annee: ref.annee,
+            type_mission: ref.type_mission,
+            montant: ref.montant,
+            description_projet: ref.description_projet,
+            salaries: [] // À implémenter plus tard
+          }));
+          setReferences(referencesFormatted);
+        }
+
+        // Charger les référentiels
+        if (agencesResponse.ok) {
+          const agencesData = await agencesResponse.json();
+          setAgences(agencesData.agences.filter((a: any) => a.actif).map((a: any) => a.nom));
+        }
+
+        if (fonctionsResponse.ok) {
+          const fonctionsData = await fonctionsResponse.json();
+          setFonctions(fonctionsData.fonctions.filter((f: any) => f.actif).map((f: any) => f.nom));
+        }
+
+        if (niveauxResponse.ok) {
+          const niveauxData = await niveauxResponse.json();
+          setNiveaux(niveauxData.niveaux.filter((n: any) => n.actif).map((n: any) => n.nom));
+        }
+        
+        setLoading(false);
+      } catch (err) {
+        console.error('Erreur lors du chargement des données:', err);
+        // En cas d'erreur, utiliser les données mock
+        setSalaries(MOCK_SALARIES);
+        setReferences(MOCK_REFERENCES);
+        // Valeurs par défaut pour les référentiels
+        setAgences(["Paris", "Lyon", "Marseille"]);
+        setFonctions(["Architecte", "Ingénieur", "Chef de projet"]);
+        setNiveaux(["Junior", "Confirmé", "Senior"]);
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // Dialogs
   const [openSalarie, setOpenSalarie] = useState(false);
@@ -131,88 +214,252 @@ function Admin() {
   const [loadingTest, setLoadingTest] = useState(false);
 
   // Handlers
-  const handleAddSalarie = () => {
-    setSalaries((prev) => [
-      ...prev,
-      { ...salarieForm, id: Date.now().toString(), cvFile },
-    ]);
-    setOpenSalarie(false);
-    setSalarieForm({
-      nom: "",
-      prenom: "",
-      agence: "",
-      fonction: "",
-      niveau: "",
-      actif: true,
-      template: "classic",
-    });
-    setCvFile(undefined);
-    setEditSalarieId(null);
-    showSuccess("Salarié ajouté !");
+  const handleAddSalarie = async () => {
+    try {
+      const salarieData = {
+        nom: salarieForm.nom,
+        prenom: salarieForm.prenom,
+        agence: salarieForm.agence,
+        fonction: salarieForm.fonction,
+        niveau_expertise: salarieForm.niveau,
+        actif: salarieForm.actif
+      };
+
+      const response = await fetch(`${BACKEND_URL}/api/salaries`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(salarieData),
+      });
+
+      if (response.ok) {
+        showSuccess("Salarié ajouté avec succès !");
+        setOpenSalarie(false);
+        setSalarieForm({
+          nom: "",
+          prenom: "",
+          agence: "",
+          fonction: "",
+          niveau: "",
+          actif: true,
+          template: "classic",
+        });
+        setCvFile(undefined);
+        setEditSalarieId(null);
+        
+        // Recharger les données depuis l'API
+        const salariesResponse = await fetch(`${BACKEND_URL}/api/salaries`);
+        if (salariesResponse.ok) {
+          const salariesData = await salariesResponse.json();
+          const salariesFormatted = salariesData.salaries.map((salary: any) => ({
+            id: salary.id_salarie.toString(),
+            nom: salary.nom,
+            prenom: salary.prenom,
+            agence: salary.agence,
+            fonction: salary.fonction,
+            niveau: salary.niveau_expertise,
+            actif: true,
+            template: 'classic'
+          }));
+          setSalaries(salariesFormatted);
+        }
+      } else {
+        const errorData = await response.json();
+        showError(`Erreur lors de l'ajout: ${errorData.message || 'Erreur inconnue'}`);
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout du salarié:', error);
+      showError('Erreur lors de l\'ajout du salarié');
+    }
   };
 
-  const handleEditSalarie = () => {
+  const handleEditSalarie = async () => {
     if (!editSalarieId) return;
-    setSalaries((prev) =>
-      prev.map((s) =>
-        s.id === editSalarieId ? { ...s, ...salarieForm, cvFile } : s
-      )
-    );
-    setOpenSalarie(false);
-    setEditSalarieId(null);
-    setSalarieForm({
-      nom: "",
-      prenom: "",
-      agence: "",
-      fonction: "",
-      niveau: "",
-      actif: true,
-      template: "classic",
-    });
-    setCvFile(undefined);
-    showSuccess("Salarié modifié !");
+    
+    try {
+      const salarieData = {
+        nom: salarieForm.nom,
+        prenom: salarieForm.prenom,
+        agence: salarieForm.agence,
+        fonction: salarieForm.fonction,
+        niveau_expertise: salarieForm.niveau,
+        actif: salarieForm.actif
+      };
+
+      const response = await fetch(`${BACKEND_URL}/api/salaries/${editSalarieId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(salarieData),
+      });
+
+      if (response.ok) {
+        showSuccess("Salarié modifié avec succès !");
+        setOpenSalarie(false);
+        setEditSalarieId(null);
+        setSalarieForm({
+          nom: "",
+          prenom: "",
+          agence: "",
+          fonction: "",
+          niveau: "",
+          actif: true,
+          template: "classic",
+        });
+        setCvFile(undefined);
+        
+        // Recharger les données depuis l'API
+        const salariesResponse = await fetch(`${BACKEND_URL}/api/salaries`);
+        if (salariesResponse.ok) {
+          const salariesData = await salariesResponse.json();
+          const salariesFormatted = salariesData.salaries.map((salary: any) => ({
+            id: salary.id_salarie.toString(),
+            nom: salary.nom,
+            prenom: salary.prenom,
+            agence: salary.agence,
+            fonction: salary.fonction,
+            niveau: salary.niveau_expertise,
+            actif: true,
+            template: 'classic'
+          }));
+          setSalaries(salariesFormatted);
+        }
+      } else {
+        const errorData = await response.json();
+        showError(`Erreur lors de la modification: ${errorData.message || 'Erreur inconnue'}`);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la modification du salarié:', error);
+      showError('Erreur lors de la modification du salarié');
+    }
   };
 
-  const handleAddReference = () => {
-    setReferences((prev) => [
-      ...prev,
-      { ...referenceForm, id: Date.now().toString() },
-    ]);
-    setOpenReference(false);
-    setReferenceForm({
-      nom_projet: "",
-      client: "",
-      ville: "",
-      annee: new Date().getFullYear(),
-      type_mission: "",
-      montant: 0,
-      description_projet: "",
-      salaries: [],
-    });
-    setEditReferenceId(null);
-    showSuccess("Référence ajoutée !");
+  const handleAddReference = async () => {
+    try {
+      const referenceData = {
+        nom_projet: referenceForm.nom_projet,
+        client: referenceForm.client,
+        ville: referenceForm.ville,
+        annee: referenceForm.annee,
+        type_mission: referenceForm.type_mission,
+        montant: referenceForm.montant,
+        description_projet: referenceForm.description_projet
+      };
+
+      const response = await fetch(`${BACKEND_URL}/api/references`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(referenceData),
+      });
+
+      if (response.ok) {
+        showSuccess("Référence ajoutée avec succès !");
+        setOpenReference(false);
+        setReferenceForm({
+          nom_projet: "",
+          client: "",
+          ville: "",
+          annee: new Date().getFullYear(),
+          type_mission: "",
+          montant: 0,
+          description_projet: "",
+          salaries: [],
+        });
+        setEditReferenceId(null);
+        
+        // Recharger les données depuis l'API
+        const referencesResponse = await fetch(`${BACKEND_URL}/api/references`);
+        if (referencesResponse.ok) {
+          const referencesData = await referencesResponse.json();
+          const referencesFormatted = referencesData.references.map((ref: any) => ({
+            id: ref.id_reference.toString(),
+            nom_projet: ref.nom_projet,
+            client: ref.client,
+            ville: ref.ville,
+            annee: ref.annee,
+            type_mission: ref.type_mission,
+            montant: ref.montant,
+            description_projet: ref.description_projet,
+            salaries: []
+          }));
+          setReferences(referencesFormatted);
+        }
+      } else {
+        const errorData = await response.json();
+        showError(`Erreur lors de l'ajout: ${errorData.message || 'Erreur inconnue'}`);
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout de la référence:', error);
+      showError('Erreur lors de l\'ajout de la référence');
+    }
   };
 
-  const handleEditReference = () => {
+  const handleEditReference = async () => {
     if (!editReferenceId) return;
-    setReferences((prev) =>
-      prev.map((r) =>
-        r.id === editReferenceId ? { ...r, ...referenceForm } : r
-      )
-    );
-    setOpenReference(false);
-    setEditReferenceId(null);
-    setReferenceForm({
-      nom_projet: "",
-      client: "",
-      ville: "",
-      annee: new Date().getFullYear(),
-      type_mission: "",
-      montant: 0,
-      description_projet: "",
-      salaries: [],
-    });
-    showSuccess("Référence modifiée !");
+    
+    try {
+      const referenceData = {
+        nom_projet: referenceForm.nom_projet,
+        client: referenceForm.client,
+        ville: referenceForm.ville,
+        annee: referenceForm.annee,
+        type_mission: referenceForm.type_mission,
+        montant: referenceForm.montant,
+        description_projet: referenceForm.description_projet
+      };
+
+      const response = await fetch(`${BACKEND_URL}/api/references/${editReferenceId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(referenceData),
+      });
+
+      if (response.ok) {
+        showSuccess("Référence modifiée avec succès !");
+        setOpenReference(false);
+        setEditReferenceId(null);
+        setReferenceForm({
+          nom_projet: "",
+          client: "",
+          ville: "",
+          annee: new Date().getFullYear(),
+          type_mission: "",
+          montant: 0,
+          description_projet: "",
+          salaries: [],
+        });
+        
+        // Recharger les données depuis l'API
+        const referencesResponse = await fetch(`${BACKEND_URL}/api/references`);
+        if (referencesResponse.ok) {
+          const referencesData = await referencesResponse.json();
+          const referencesFormatted = referencesData.references.map((ref: any) => ({
+            id: ref.id_reference.toString(),
+            nom_projet: ref.nom_projet,
+            client: ref.client,
+            ville: ref.ville,
+            annee: ref.annee,
+            type_mission: ref.type_mission,
+            montant: ref.montant,
+            description_projet: ref.description_projet,
+            salaries: []
+          }));
+          setReferences(referencesFormatted);
+        }
+      } else {
+        const errorData = await response.json();
+        showError(`Erreur lors de la modification: ${errorData.message || 'Erreur inconnue'}`);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la modification de la référence:', error);
+      showError('Erreur lors de la modification de la référence');
+    }
   };
 
   const handleDeleteSalarie = () => {
@@ -344,6 +591,16 @@ function Admin() {
       setLoadingTest(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto py-10 px-2">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-blue"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto py-10 px-2">
@@ -502,14 +759,14 @@ function Admin() {
                 <Label>Agence</Label>
                 <select className="w-full border rounded px-2 py-1" value={salarieForm.agence} onChange={e => setSalarieForm(f => ({ ...f, agence: e.target.value }))}>
                   <option value="">Sélectionner</option>
-                  {AGENCES.map(a => <option key={a} value={a}>{a}</option>)}
+                  {agences.map(a => <option key={a} value={a}>{a}</option>)}
                 </select>
               </div>
               <div>
                 <Label>Fonction</Label>
                 <select className="w-full border rounded px-2 py-1" value={salarieForm.fonction} onChange={e => setSalarieForm(f => ({ ...f, fonction: e.target.value }))}>
                   <option value="">Sélectionner</option>
-                  {FONCTIONS.map(f => <option key={f} value={f}>{f}</option>)}
+                  {fonctions.map(f => <option key={f} value={f}>{f}</option>)}
                 </select>
               </div>
             </div>
@@ -518,7 +775,7 @@ function Admin() {
                 <Label>Niveau</Label>
                 <select className="w-full border rounded px-2 py-1" value={salarieForm.niveau} onChange={e => setSalarieForm(f => ({ ...f, niveau: e.target.value }))}>
                   <option value="">Sélectionner</option>
-                  {NIVEAUX.map(n => <option key={n} value={n}>{n}</option>)}
+                  {niveaux.map(n => <option key={n} value={n}>{n}</option>)}
                 </select>
               </div>
               <div>
@@ -566,7 +823,7 @@ function Admin() {
               <Label>Ville</Label>
               <select className="w-full border rounded px-2 py-1" value={referenceForm.ville} onChange={e => setReferenceForm(f => ({ ...f, ville: e.target.value }))}>
                 <option value="">Sélectionner</option>
-                {AGENCES.map(a => <option key={a} value={a}>{a}</option>)}
+                {agences.map(a => <option key={a} value={a}>{a}</option>)}
               </select>
             </div>
             <div>

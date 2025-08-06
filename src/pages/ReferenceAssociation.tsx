@@ -1,9 +1,18 @@
 import { useWorkflow } from "@/components/WorkflowContext";
-import { EMPLOYEES } from "@/components/TeamSelectionStep";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { showSuccess } from "@/utils/toast";
+
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+
+interface Employee {
+  id: string;
+  name: string;
+  agency: string;
+  function: string;
+  level: string;
+}
 
 const MOCK_REFERENCES = [
   {
@@ -65,6 +74,36 @@ export default function ReferenceAssociation() {
     setTemplateAssociation,
   } = useWorkflow();
   const navigate = useNavigate();
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Charger les employés depuis l'API
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const response = await fetch(`${BACKEND_URL}/api/salaries`);
+        if (!response.ok) {
+          throw new Error(`Erreur HTTP: ${response.status}`);
+        }
+        const data = await response.json();
+        
+        const employeesFormatted = data.salaries.map((salary: any) => ({
+          id: salary.id_salarie.toString(),
+          name: `${salary.prenom} ${salary.nom}`,
+          agency: salary.agence,
+          function: salary.fonction,
+          level: salary.niveau_expertise
+        }));
+        setEmployees(employeesFormatted);
+        setLoading(false);
+      } catch (err) {
+        console.error('Erreur lors du chargement des employés:', err);
+        setLoading(false);
+      }
+    };
+
+    fetchEmployees();
+  }, []);
 
   // Redirige si aucune sélection
   useEffect(() => {
@@ -134,8 +173,18 @@ export default function ReferenceAssociation() {
     }, 600);
   };
 
-  const team = EMPLOYEES.filter((e) => selectedTeam.includes(e.id));
+  const team = employees.filter((e) => selectedTeam.includes(e.id));
   const references = MOCK_REFERENCES.filter((r) => selectedReferences.includes(r.id));
+
+  if (loading) {
+    return (
+      <div className="max-w-5xl mx-auto py-10 px-2">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-blue"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto py-10 px-2">
