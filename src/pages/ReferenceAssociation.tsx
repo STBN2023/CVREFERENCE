@@ -1,253 +1,275 @@
-import { useWorkflow } from "@/components/WorkflowContext";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
-import { showSuccess } from "@/utils/toast";
+import React, { useEffect, useState } from 'react';
+import { useWorkflow } from '@/components/WorkflowContext';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
 
-interface Employee {
-  id: string;
-  name: string;
-  agency: string;
-  function: string;
-  level: string;
+interface Salarie {
+  id_salarie: number;
+  nom: string;
+  prenom: string;
+  agence: string;
+  fonction: string;
+  niveau_expertise: string;
+  references?: Reference[];
 }
 
-const MOCK_REFERENCES = [
-  {
-    id: "1",
-    nom_projet: "Tour Majunga",
-    ville: "Paris",
-    annee: 2021,
-    type_mission: "Construction",
-    montant: 12000000,
-    client: "Société Générale",
-    description_projet: "Construction d'une tour de bureaux de 45 étages.",
-  },
-  {
-    id: "2",
-    nom_projet: "Hôpital Sud",
-    ville: "Lyon",
-    annee: 2019,
-    type_mission: "Rénovation",
-    montant: 8000000,
-    client: "CHU Lyon",
-    description_projet: "Rénovation complète du pôle maternité.",
-  },
-  {
-    id: "3",
-    nom_projet: "Campus Innovation",
-    ville: "Toulouse",
-    annee: 2022,
-    type_mission: "Extension",
-    montant: 5000000,
-    client: "Université Toulouse",
-    description_projet: "Extension du campus universitaire avec laboratoires.",
-  },
-  {
-    id: "4",
-    nom_projet: "EcoQuartier Nord",
-    ville: "Lille",
-    annee: 2020,
-    type_mission: "Construction",
-    montant: 9500000,
-    client: "Ville de Lille",
-    description_projet: "Création d'un écoquartier de 200 logements.",
-  },
-];
+interface Reference {
+  id_reference: number;
+  nom_projet: string;
+  ville: string;
+  annee: number;
+  type_mission: string;
+  montant: number;
+  client: string;
+  role_projet?: string;
+  principal?: boolean;
+}
 
-// Liste des templates de CV disponibles
-const CV_TEMPLATES = [
-  { id: "classic", label: "Classique" },
-  { id: "modern", label: "Moderne" },
-  { id: "minimal", label: "Minimal" },
-];
-
-export default function ReferenceAssociation() {
-  const {
-    selectedTeam,
-    selectedReferences,
-    referenceAssociation,
+const ReferenceAssociation: React.FC = () => {
+  const { 
+    selectedTeam, 
+    selectedReferences, 
+    referenceAssociation, 
     setReferenceAssociation,
-    templateAssociation,
-    setTemplateAssociation,
+    useDefaultReferences,
+    setUseDefaultReferences
   } = useWorkflow();
   const navigate = useNavigate();
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
-  // Charger les employés depuis l'API
+  // Charger toutes les références disponibles
+  const { data: referencesData, isLoading: referencesLoading } = useQuery({
+    queryKey: ['references'],
+    queryFn: async () => {
+      const response = await fetch(`${BACKEND_URL}/api/references`);
+      if (!response.ok) throw new Error('Erreur chargement références');
+      return response.json();
+    }
+  });
+
+  const references = referencesData?.references || [];
+
+  // Charger les références par défaut pour chaque membre de l'équipe
   useEffect(() => {
-    const fetchEmployees = async () => {
+    const loadDefaultReferences = async () => {
+      if (!useDefaultReferences || selectedTeam.length === 0) return;
+      
+      setLoading(true);
+      const newAssociations: { [key: number]: number[] } = {};
+      
       try {
-        const response = await fetch(`${BACKEND_URL}/api/salaries`);
-        if (!response.ok) {
-          throw new Error(`Erreur HTTP: ${response.status}`);
+        for (const member of selectedTeam) {
+          const response = await fetch(`${BACKEND_URL}/api/salaries/${member.id_salarie}/references`);
+          if (response.ok) {
+            const data = await response.json();
+            newAssociations[member.id_salarie] = data.references.map((ref: Reference) => ref.id_reference);
+          } else {
+            newAssociations[member.id_salarie] = [];
+          }
         }
-        const data = await response.json();
         
-        const employeesFormatted = data.salaries.map((salary: any) => ({
-          id: salary.id_salarie.toString(),
-          name: `${salary.prenom} ${salary.nom}`,
-          agency: salary.agence,
-          function: salary.fonction,
-          level: salary.niveau_expertise
-        }));
-        setEmployees(employeesFormatted);
-        setLoading(false);
-      } catch (err) {
-        console.error('Erreur lors du chargement des employés:', err);
+        setReferenceAssociation(newAssociations);
+        console.log('🔧 [ASSOCIATION] Références par défaut chargées:', newAssociations);
+      } catch (error) {
+        console.error('❌ [ASSOCIATION] Erreur chargement références par défaut:', error);
+      } finally {
         setLoading(false);
       }
     };
 
-    fetchEmployees();
-  }, []);
+    loadDefaultReferences();
+  }, [selectedTeam, useDefaultReferences, setReferenceAssociation]);
 
-  // Redirige si aucune sélection
-  useEffect(() => {
-    if (selectedTeam.length === 0 || selectedReferences.length === 0) {
-      navigate("/");
-    }
-  }, [selectedTeam, selectedReferences, navigate]);
-
-  // Initialiser l'association si vide
-  useEffect(() => {
-    if (Object.keys(referenceAssociation).length === 0) {
-      const initial: Record<string, string[]> = {};
-      selectedTeam.forEach((empId) => {
-        initial[empId] = [...selectedReferences];
-      });
-      setReferenceAssociation(initial);
-    }
-    // eslint-disable-next-line
-  }, []);
-
-  // Initialiser l'association de template si vide
-  useEffect(() => {
-    if (Object.keys(templateAssociation).length === 0) {
-      const initial: Record<string, string> = {};
-      selectedTeam.forEach((empId) => {
-        initial[empId] = CV_TEMPLATES[0].id; // Par défaut "Classique"
-      });
-      setTemplateAssociation(initial);
-    }
-    // eslint-disable-next-line
-  }, []);
-
-  const [localAssoc, setLocalAssoc] = useState<Record<string, string[]>>(
-    referenceAssociation && Object.keys(referenceAssociation).length > 0
-      ? referenceAssociation
-      : Object.fromEntries(selectedTeam.map((id) => [id, [...selectedReferences]]))
-  );
-
-  const [localTemplates, setLocalTemplates] = useState<Record<string, string>>(
-    templateAssociation && Object.keys(templateAssociation).length > 0
-      ? templateAssociation
-      : Object.fromEntries(selectedTeam.map((id) => [id, CV_TEMPLATES[0].id]))
-  );
-
-  const handleToggle = (empId: string, refId: string) => {
-    setLocalAssoc((prev) => ({
-      ...prev,
-      [empId]: prev[empId].includes(refId)
-        ? prev[empId].filter((id) => id !== refId)
-        : [...prev[empId], refId],
-    }));
-  };
-
-  const handleTemplateChange = (empId: string, templateId: string) => {
-    setLocalTemplates((prev) => ({
-      ...prev,
-      [empId]: templateId,
-    }));
-  };
-
-  const handleValidate = () => {
-    setReferenceAssociation(localAssoc);
-    setTemplateAssociation(localTemplates);
-    showSuccess("Associations enregistrées !");
-    setTimeout(() => {
-      navigate("/recap");
-    }, 600);
-  };
-
-  const team = employees.filter((e) => selectedTeam.includes(e.id));
-  const references = MOCK_REFERENCES.filter((r) => selectedReferences.includes(r.id));
-
-  if (loading) {
+  // Vérifier si l'équipe est sélectionnée
+  if (selectedTeam.length === 0) {
     return (
-      <div className="max-w-5xl mx-auto py-10 px-2">
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-blue"></div>
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <div className="text-6xl mb-4">⚠️</div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Aucune équipe sélectionnée</h2>
+          <p className="text-gray-600 mb-6">Veuillez d'abord sélectionner une équipe.</p>
+          <Button onClick={() => navigate('/team')} className="bg-blue-600 hover:bg-blue-700">
+            🔙 Retour à la sélection d'équipe
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Toggle d'une référence pour un membre
+  const toggleReference = (memberId: number, referenceId: number) => {
+    const currentRefs = referenceAssociation[memberId] || [];
+    const newRefs = currentRefs.includes(referenceId)
+      ? currentRefs.filter(id => id !== referenceId)
+      : [...currentRefs, referenceId];
+    
+    setReferenceAssociation({
+      ...referenceAssociation,
+      [memberId]: newRefs
+    });
+  };
+
+  // Continuer vers le récapitulatif
+  const handleContinue = () => {
+    console.log('🔗 [ASSOCIATION] Associations finales:', referenceAssociation);
+    navigate('/recap');
+  };
+
+  // Calculer les statistiques
+  const totalAssociations = Object.values(referenceAssociation).reduce((sum, refs) => sum + refs.length, 0);
+  const membersWithRefs = Object.values(referenceAssociation).filter(refs => refs.length > 0).length;
+
+  if (loading || referencesLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">
+            {useDefaultReferences ? 'Chargement des références par défaut...' : 'Chargement des références...'}
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto py-10 px-2">
-      <h2 className="text-4xl font-extrabold mb-10 text-center text-brand-dark tracking-tight drop-shadow-sm">
-        Associer les références et le template de CV à chaque membre de l’équipe
-      </h2>
-      <div className="flex flex-col gap-8">
-        {team.map((emp) => (
-          <div key={emp.id} className="bg-white rounded-xl shadow p-6 border-2 border-brand-dark">
-            <div className="font-bold text-lg text-brand-blue mb-2">
-              {emp.name} <span className="text-sm text-brand-dark/60">({emp.function} • {emp.level})</span>
-            </div>
-            <div className="mb-3">
-              <label className="block text-sm font-semibold text-brand-dark mb-1">
-                Template de CV
-              </label>
-              <select
-                className="w-full max-w-xs border-2 border-brand-blue rounded-full px-4 py-2 text-brand-dark bg-brand-lightblue font-medium"
-                value={localTemplates[emp.id] || CV_TEMPLATES[0].id}
-                onChange={e => handleTemplateChange(emp.id, e.target.value)}
-              >
-                {CV_TEMPLATES.map(tpl => (
-                  <option key={tpl.id} value={tpl.id}>{tpl.label}</option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              {references.map((ref) => {
-                const checked = localAssoc[emp.id]?.includes(ref.id);
-                return (
-                  <label
-                    key={ref.id}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 text-sm font-medium cursor-pointer transition
-                      ${checked
-                        ? "bg-brand-yellow text-brand-dark border-brand-yellow shadow"
-                        : "bg-white text-brand-dark border-brand-dark hover:bg-brand-pale"}
-                    `}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => handleToggle(emp.id, ref.id)}
-                      className="accent-brand-blue"
-                    />
-                    {ref.nom_projet}
-                  </label>
-                );
-              })}
-              {references.length === 0 && (
-                <span className="text-gray-400 text-sm">Aucune référence sélectionnée</span>
-              )}
-            </div>
-          </div>
-        ))}
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-800 mb-2">
+          🔗 Association Membres ↔ Références
+        </h1>
+        <p className="text-gray-600">
+          {useDefaultReferences 
+            ? 'Les références par défaut ont été pré-chargées. Vous pouvez les modifier selon vos besoins.'
+            : 'Associez manuellement les références à chaque membre de l\'équipe.'
+          }
+        </p>
       </div>
-      <div className="flex justify-end mt-10">
+
+      {/* Options de chargement */}
+      <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+        <div className="flex items-center gap-4">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={useDefaultReferences}
+              onChange={(e) => setUseDefaultReferences(e.target.checked)}
+              className="w-4 h-4 text-blue-600 rounded"
+            />
+            <span className="text-blue-800 font-medium">
+              🔧 Utiliser les références par défaut des salariés
+            </span>
+          </label>
+        </div>
+        <p className="text-sm text-blue-600 mt-2">
+          Les références par défaut sont définies dans la page "🔧 Références par défaut" du menu.
+        </p>
+      </div>
+
+      {/* Statistiques */}
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white p-4 rounded-lg shadow-md text-center">
+          <div className="text-2xl font-bold text-blue-600">{selectedTeam.length}</div>
+          <div className="text-gray-600">Membres sélectionnés</div>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow-md text-center">
+          <div className="text-2xl font-bold text-green-600">{totalAssociations}</div>
+          <div className="text-gray-600">Associations totales</div>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow-md text-center">
+          <div className="text-2xl font-bold text-purple-600">{membersWithRefs}</div>
+          <div className="text-gray-600">Membres avec références</div>
+        </div>
+      </div>
+
+      {/* Associations par membre */}
+      <div className="space-y-6">
+        {selectedTeam.map((member: Salarie) => {
+          const memberRefs = referenceAssociation[member.id_salarie] || [];
+          
+          return (
+            <div key={member.id_salarie} className="bg-white rounded-lg shadow-md p-6">
+              <div className="mb-4">
+                <h3 className="text-xl font-semibold text-gray-800">
+                  👤 {member.prenom} {member.nom}
+                </h3>
+                <p className="text-gray-600">
+                  {member.fonction} • {member.agence} • {member.niveau_expertise}
+                </p>
+                <p className="text-sm text-blue-600 mt-1">
+                  {memberRefs.length} référence(s) associée(s)
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {references.map((reference: Reference) => {
+                  const isSelected = memberRefs.includes(reference.id_reference);
+                  
+                  return (
+                    <div
+                      key={reference.id_reference}
+                      onClick={() => toggleReference(member.id_salarie, reference.id_reference)}
+                      className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                        isSelected
+                          ? 'border-green-500 bg-green-50'
+                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-800 text-sm">
+                            {reference.nom_projet}
+                          </div>
+                          <div className="text-xs text-gray-600">
+                            {reference.ville} • {reference.annee}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {reference.type_mission}
+                          </div>
+                        </div>
+                        <div className="ml-2">
+                          {isSelected ? (
+                            <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                              <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          ) : (
+                            <div className="w-4 h-4 border-2 border-gray-300 rounded-full"></div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Actions */}
+      <div className="mt-8 flex gap-4">
         <Button
-          className="rounded-full px-8 py-2 text-base font-bold bg-brand-yellow text-brand-dark shadow-lg hover:bg-brand-yellow/90 transition"
-          onClick={handleValidate}
+          onClick={() => navigate('/references')}
+          variant="outline"
+          className="flex-1"
         >
-          Valider les associations et continuer
+          🔙 Retour aux références
+        </Button>
+        <Button
+          onClick={handleContinue}
+          className="flex-1 bg-green-600 hover:bg-green-700"
+          disabled={totalAssociations === 0}
+        >
+          📋 Continuer vers le récapitulatif
         </Button>
       </div>
     </div>
   );
-}
+};
+
+export default ReferenceAssociation;

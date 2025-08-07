@@ -526,7 +526,129 @@ app.delete('/api/download/:filename', (req, res) => {
   }
 });
 
-// Démarrage du serveur avec initialisation de la base de données
+// Récupérer les références d'un salarié
+app.get('/api/salaries/:id/references', async (req, res) => {
+  const { id } = req.params;
+  console.log(`📋 [API] Récupération références salarié ID: ${id}`);
+  try {
+    const references = await dbManager.getSalarieReferences(id);
+    console.log(`✅ [API] ${references.length} références trouvées pour le salarié ${id}`);
+    res.json({ references });
+  } catch (error) {
+    console.error('❌ [API] Erreur récupération références salarié:', error.message);
+    res.status(500).json({ error: 'Erreur lors de la récupération des références' });
+  }
+});
+
+// Ajouter une référence à un salarié
+app.post('/api/salaries/:id/references', async (req, res) => {
+  const { id } = req.params;
+  const { id_reference, role_projet, principal } = req.body;
+  console.log(`➕ [API] Ajout référence ${id_reference} au salarié ${id}`);
+  try {
+    const result = await dbManager.addSalarieReference(id, id_reference, role_projet, principal);
+    console.log(`✅ [API] Association créée avec ID: ${result.lastID}`);
+    res.status(201).json({ id: result.lastID, message: 'Association créée avec succès' });
+  } catch (error) {
+    console.error('❌ [API] Erreur ajout association:', error.message);
+    res.status(500).json({ error: 'Erreur lors de l\'ajout de l\'association' });
+  }
+});
+
+// Supprimer une référence d'un salarié
+app.delete('/api/salaries/:id/references/:refId', async (req, res) => {
+  const { id, refId } = req.params;
+  console.log(`❌ [API] Suppression référence ${refId} du salarié ${id}`);
+  try {
+    const result = await dbManager.removeSalarieReference(id, refId);
+    console.log(`✅ [API] Association supprimée`);
+    res.json({ message: 'Association supprimée avec succès' });
+  } catch (error) {
+    console.error('❌ [API] Erreur suppression association:', error.message);
+    res.status(500).json({ error: 'Erreur lors de la suppression de l\'association' });
+  }
+});
+
+// Mettre à jour les références par défaut d'un salarié
+app.put('/api/salaries/:id/references', async (req, res) => {
+  const { id } = req.params;
+  const { referenceIds } = req.body;
+  console.log(`🔄 [API] Définition références par défaut salarié ${id}:`, referenceIds);
+  try {
+    const result = await dbManager.setSalarieDefaultReferences(id, referenceIds || []);
+    console.log(`✅ [API] ${result.count} références par défaut définies pour le salarié ${id}`);
+    res.json({ message: 'Références par défaut mises à jour', count: result.count });
+  } catch (error) {
+    console.error('❌ [API] Erreur mise à jour références par défaut:', error.message);
+    res.status(500).json({ error: 'Erreur lors de la mise à jour des références par défaut' });
+  }
+});
+
+// Récupérer les salariés associés à une référence
+app.get('/api/references/:referenceId/salaries', async (req, res) => {
+  const { referenceId } = req.params;
+  console.log(`👥 [API] Récupération salariés pour référence ${referenceId}`);
+  
+  try {
+    const salaries = await dbManager.all(`
+      SELECT s.id_salarie, s.nom, s.prenom, s.agence, s.fonction, s.niveau_expertise
+      FROM salaries s
+      INNER JOIN salaries_references sr ON s.id_salarie = sr.id_salarie
+      WHERE sr.id_reference = ?
+      ORDER BY s.nom, s.prenom
+    `, [referenceId]);
+    
+    console.log(`✅ [API] ${salaries.length} salariés trouvés pour la référence ${referenceId}`);
+    res.json({ salaries });
+  } catch (error) {
+    console.error('❌ [API] Erreur récupération salariés référence:', error.message);
+    res.status(500).json({ error: 'Erreur lors de la récupération des salariés' });
+  }
+});
+
+// Mettre à jour les associations d'une référence (remplacer tous les salariés associés)
+app.put('/api/salaries/references/:referenceId', async (req, res) => {
+  const { referenceId } = req.params;
+  const { salarieIds } = req.body;
+  console.log(`🔗 [API] Mise à jour associations référence ${referenceId}:`, salarieIds);
+  
+  try {
+    // Supprimer toutes les associations existantes pour cette référence
+    await dbManager.run('DELETE FROM salaries_references WHERE id_reference = ?', [referenceId]);
+    
+    // Créer les nouvelles associations
+    let count = 0;
+    if (salarieIds && salarieIds.length > 0) {
+      for (const salarieId of salarieIds) {
+        await dbManager.run(
+          'INSERT INTO salaries_references (id_salarie, id_reference, role_projet, principal) VALUES (?, ?, ?, ?)',
+          [salarieId, referenceId, null, false]
+        );
+        count++;
+      }
+    }
+    
+    console.log(`✅ [API] ${count} associations créées pour la référence ${referenceId}`);
+    res.json({ message: 'Associations mises à jour', count });
+  } catch (error) {
+    console.error('❌ [API] Erreur mise à jour associations référence:', error.message);
+    res.status(500).json({ error: 'Erreur lors de la mise à jour des associations' });
+  }
+});
+
+// Récupérer tous les salariés avec leurs références
+app.get('/api/salaries-with-references', async (req, res) => {
+  console.log('👥 [API] Récupération salariés avec références');
+  try {
+    const salaries = await dbManager.getSalariesWithReferences();
+    console.log(`✅ [API] ${salaries.length} salariés avec références récupérés`);
+    res.json({ salaries });
+  } catch (error) {
+    console.error('❌ [API] Erreur récupération salariés avec références:', error.message);
+    res.status(500).json({ error: 'Erreur lors de la récupération des salariés avec références' });
+  }
+});
+
 app.listen(PORT, async () => {
   console.log('\n🚀 ===== BACKEND CV ENRICHMENT =====');
   console.log(`🌐 Serveur démarré sur http://localhost:${PORT}`);
@@ -547,8 +669,13 @@ app.listen(PORT, async () => {
   console.log('   • GET  /api/references');
   console.log('   • GET  /api/salaries/:id');
   console.log('   • GET  /api/salaries/:id/references');
+  console.log('   • POST /api/salaries/:id/references');
+  console.log('   • PUT  /api/salaries/:id/references');
+  console.log('   • DEL  /api/salaries/:id/references/:refId');
+  console.log('   • GET  /api/salaries-with-references');
   console.log('   • POST /api/salaries');
   console.log('   • POST /api/references');
+  console.log('   • POST /api/generate-cv');
   console.log('   • GET  /template.pptx');
   console.log('   • POST /api/enrich-cv');
   console.log('   • GET  /api/downloads');
@@ -557,13 +684,297 @@ app.listen(PORT, async () => {
   console.log('=====================================\n');
 });
 
+// ===================================
+// ENDPOINTS ASSOCIATIONS SALARIÉS-RÉFÉRENCES
+// ===================================
+
+// Récupérer les références d'un salarié
+app.get('/api/salaries/:id/references', async (req, res) => {
+  const { id } = req.params;
+  console.log(`📋 [API] Récupération références salarié ID: ${id}`);
+  try {
+    const references = await dbManager.getSalarieReferences(id);
+    console.log(`✅ [API] ${references.length} références trouvées pour le salarié ${id}`);
+    res.json({ references });
+  } catch (error) {
+    console.error('❌ [API] Erreur récupération références salarié:', error.message);
+    res.status(500).json({ error: 'Erreur lors de la récupération des références' });
+  }
+});
+
+// Associer une référence à un salarié
+app.post('/api/salaries/:id/references', async (req, res) => {
+  const { id } = req.params;
+  const { referenceId, role_projet, date_debut, date_fin, principal } = req.body;
+  console.log(`➕ [API] Association salarié ${id} avec référence ${referenceId}`);
+  try {
+    await dbManager.addSalarieReference(id, referenceId, {
+      role_projet,
+      date_debut,
+      date_fin,
+      principal
+    });
+    console.log(`✅ [API] Association créée: salarié ${id} <-> référence ${referenceId}`);
+    res.status(201).json({ message: 'Association créée avec succès' });
+  } catch (error) {
+    console.error('❌ [API] Erreur création association:', error.message);
+    res.status(500).json({ error: 'Erreur lors de la création de l\'association' });
+  }
+});
+
+// Supprimer l'association entre un salarié et une référence
+app.delete('/api/salaries/:id/references/:refId', async (req, res) => {
+  const { id, refId } = req.params;
+  console.log(`🗑️ [API] Suppression association salarié ${id} <-> référence ${refId}`);
+  try {
+    await dbManager.removeSalarieReference(id, refId);
+    console.log(`✅ [API] Association supprimée: salarié ${id} <-> référence ${refId}`);
+    res.json({ message: 'Association supprimée avec succès' });
+  } catch (error) {
+    console.error('❌ [API] Erreur suppression association:', error.message);
+    res.status(500).json({ error: 'Erreur lors de la suppression de l\'association' });
+  }
+});
+
+// Définir les références par défaut d'un salarié
+app.put('/api/salaries/:id/references', async (req, res) => {
+  const { id } = req.params;
+  const { referenceIds } = req.body;
+  console.log(`🔄 [API] Définition références par défaut salarié ${id}:`, referenceIds);
+  try {
+    const result = await dbManager.setSalarieDefaultReferences(id, referenceIds || []);
+    console.log(`✅ [API] ${result.count} références par défaut définies pour le salarié ${id}`);
+    res.json({ message: 'Références par défaut mises à jour', count: result.count });
+  } catch (error) {
+    console.error('❌ [API] Erreur mise à jour références par défaut:', error.message);
+    res.status(500).json({ error: 'Erreur lors de la mise à jour des références par défaut' });
+  }
+});
+
+// Récupérer les salariés associés à une référence
+app.get('/api/references/:referenceId/salaries', async (req, res) => {
+  const { referenceId } = req.params;
+  console.log(`👥 [API] Récupération salariés pour référence ${referenceId}`);
+  
+  try {
+    const salaries = await dbManager.all(`
+      SELECT s.id_salarie, s.nom, s.prenom, s.agence, s.fonction, s.niveau_expertise
+      FROM salaries s
+      INNER JOIN salaries_references sr ON s.id_salarie = sr.id_salarie
+      WHERE sr.id_reference = ?
+      ORDER BY s.nom, s.prenom
+    `, [referenceId]);
+    
+    console.log(`✅ [API] ${salaries.length} salariés trouvés pour la référence ${referenceId}`);
+    res.json({ salaries });
+  } catch (error) {
+    console.error('❌ [API] Erreur récupération salariés référence:', error.message);
+    res.status(500).json({ error: 'Erreur lors de la récupération des salariés' });
+  }
+});
+
+// Mettre à jour les associations d'une référence (remplacer tous les salariés associés)
+app.put('/api/salaries/references/:referenceId', async (req, res) => {
+  const { referenceId } = req.params;
+  const { salarieIds } = req.body;
+  console.log(`🔗 [API] Mise à jour associations référence ${referenceId}:`, salarieIds);
+  
+  try {
+    // Supprimer toutes les associations existantes pour cette référence
+    await dbManager.run('DELETE FROM salaries_references WHERE id_reference = ?', [referenceId]);
+    
+    // Créer les nouvelles associations
+    let count = 0;
+    if (salarieIds && salarieIds.length > 0) {
+      for (const salarieId of salarieIds) {
+        await dbManager.run(
+          'INSERT INTO salaries_references (id_salarie, id_reference, role_projet, principal) VALUES (?, ?, ?, ?)',
+          [salarieId, referenceId, null, false]
+        );
+        count++;
+      }
+    }
+    
+    console.log(`✅ [API] ${count} associations créées pour la référence ${referenceId}`);
+    res.json({ message: 'Associations mises à jour', count });
+  } catch (error) {
+    console.error('❌ [API] Erreur mise à jour associations référence:', error.message);
+    res.status(500).json({ error: 'Erreur lors de la mise à jour des associations' });
+  }
+});
+
+// Récupérer tous les salariés avec leurs références
+app.get('/api/salaries-with-references', async (req, res) => {
+  console.log('👥 [API] Récupération salariés avec références');
+  try {
+    const salaries = await dbManager.getSalariesWithReferences();
+    console.log(`✅ [API] ${salaries.length} salariés avec références récupérés`);
+    res.json({ salaries });
+  } catch (error) {
+    console.error('❌ [API] Erreur récupération salariés avec références:', error.message);
+    res.status(500).json({ error: 'Erreur lors de la récupération des salariés avec références' });
+  }
+});
+
+// Endpoint pour générer les CV avec le template par défaut
+app.post('/api/generate-cv', async (req, res) => {
+  console.log('\n=== 🚀 [GENERATE-CV] DÉBUT GÉNÉRATION ===');
+  console.log('📅 Timestamp:', new Date().toISOString());
+  
+  try {
+    const { teamData, referencesData, associations } = req.body;
+    
+    if (!teamData || !referencesData || !associations) {
+      console.error('❌ [GENERATE-CV] Données manquantes');
+      return res.status(400).json({ error: 'Données manquantes (teamData, referencesData, associations)' });
+    }
+    
+    console.log('📊 [GENERATE-CV] Données reçues:', {
+      team: teamData.length,
+      references: referencesData.length,
+      associations: Object.keys(associations).length
+    });
+    
+    // Vérifier que le template existe
+    const templatePath = path.join(__dirname, 'template.pptx');
+    if (!fs.existsSync(templatePath)) {
+      console.error('❌ [GENERATE-CV] Template non trouvé:', templatePath);
+      return res.status(404).json({ error: 'Template PowerPoint non trouvé' });
+    }
+    
+    const generatedFiles = [];
+    
+    // Générer un CV pour chaque membre de l'équipe
+    for (const member of teamData) {
+      console.log(`👤 [GENERATE-CV] Génération CV pour: ${member.name}`);
+      
+      // Récupérer les références associées à ce membre
+      const memberReferences = associations[member.id] || [];
+      const memberReferencesData = memberReferences.map(refId => 
+        referencesData.find(ref => ref.id === refId)
+      ).filter(Boolean);
+      
+      console.log(`📋 [GENERATE-CV] ${member.name}: ${memberReferencesData.length} références`);
+      
+      // Lire le template
+      const zip = new JSZip();
+      const templateBuffer = fs.readFileSync(templatePath);
+      const content = await zip.loadAsync(templateBuffer);
+      
+      // Construction du texte des références
+      const refsText = memberReferencesData.map((ref, index) => {
+        const nom = ref.nom_projet || `Projet ${index + 1}`;
+        const client = ref.client || 'Client non spécifié';
+        const montant = ref.montant ? `${ref.montant.toLocaleString()} €` : 'Non spécifié';
+        const annee = ref.annee || 'Non spécifié';
+        const ville = ref.ville || 'Non spécifié';
+        const type = ref.type_mission || 'Non spécifié';
+        
+        return `${index + 1}. ${nom}\n   Client: ${client}\n   Ville: ${ville}\n   Type: ${type}\n   Montant: ${montant}\n   Année: ${annee}`;
+      }).join('\n\n') || 'Aucune référence disponible';
+      
+      // Remplacement des placeholders
+      const files = Object.keys(content.files);
+      let replacements = 0;
+      
+      for (const fileName of files) {
+        if (fileName.includes('slide') && fileName.endsWith('.xml')) {
+          const file = content.files[fileName];
+          if (!file.dir) {
+            let xmlContent = await file.async('string');
+            let modified = false;
+            
+            // Remplacer {{REFS}}
+            if (xmlContent.includes('{{REFS}}')) {
+              xmlContent = xmlContent.replace(/\{\{REFS\}\}/g, refsText);
+              modified = true;
+              replacements++;
+            }
+            
+            // Remplacer {{NOM}} avec le nom du membre
+            if (xmlContent.includes('{{NOM}}')) {
+              xmlContent = xmlContent.replace(/\{\{NOM\}\}/g, member.name);
+              modified = true;
+            }
+            
+            // Remplacer {{PRENOM}} avec le prénom
+            if (xmlContent.includes('{{PRENOM}}')) {
+              const prenom = member.prenom || member.name.split(' ')[0];
+              xmlContent = xmlContent.replace(/\{\{PRENOM\}\}/g, prenom);
+              modified = true;
+            }
+            
+            // Remplacer {{FONCTION}} avec la fonction
+            if (xmlContent.includes('{{FONCTION}}')) {
+              const fonction = member.fonction || 'Non spécifié';
+              xmlContent = xmlContent.replace(/\{\{FONCTION\}\}/g, fonction);
+              modified = true;
+            }
+            
+            // Remplacer {{AGENCE}} avec l'agence
+            if (xmlContent.includes('{{AGENCE}}')) {
+              const agence = member.agence || 'Non spécifié';
+              xmlContent = xmlContent.replace(/\{\{AGENCE\}\}/g, agence);
+              modified = true;
+            }
+            
+            if (modified) {
+              content.file(fileName, xmlContent);
+            }
+          }
+        }
+      }
+      
+      // Génération du fichier
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const safeFileName = member.name.replace(/[^a-zA-Z0-9]/g, '_');
+      const outputFilename = `cv_${safeFileName}_${timestamp}.pptx`;
+      const outputPath = path.join(downloadsDir, outputFilename);
+      
+      const outputBuffer = await content.generateAsync({ type: 'nodebuffer' });
+      fs.writeFileSync(outputPath, outputBuffer);
+      
+      generatedFiles.push({
+        member: member.name,
+        filename: outputFilename,
+        downloadUrl: `/api/download/${outputFilename}`,
+        referencesCount: memberReferencesData.length,
+        replacements: replacements,
+        fileSize: outputBuffer.length
+      });
+      
+      console.log(`✅ [GENERATE-CV] CV généré pour ${member.name}: ${outputFilename}`);
+    }
+    
+    const response = {
+      message: 'CV générés avec succès',
+      generatedFiles: generatedFiles,
+      totalFiles: generatedFiles.length
+    };
+    
+    console.log('✅ [GENERATE-CV] Succès:', response.totalFiles, 'fichiers générés');
+    console.log('=== 🏁 [GENERATE-CV] FIN GÉNÉRATION ===\n');
+    
+    res.json(response);
+    
+  } catch (error) {
+    console.error('💥 [GENERATE-CV] ERREUR:', error.message);
+    console.error('💥 [GENERATE-CV] Stack:', error.stack);
+    
+    res.status(500).json({ 
+      error: 'Erreur lors de la génération des CV',
+      details: error.message 
+    });
+  }
+});
+
 // Gestion des erreurs non capturées
 process.on('uncaughtException', (error) => {
-  console.error('💥 [FATAL] Erreur non capturée:', error);
+  console.error('[FATAL] Erreur non capturée:', error);
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('💥 [FATAL] Promise rejetée:', reason);
+  console.error('[FATAL] Promise rejetée:', reason);
   process.exit(1);
 });

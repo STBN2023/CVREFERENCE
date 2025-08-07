@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useWorkflow } from '../context/WorkflowContext';
+import { useWorkflow } from '@/components/WorkflowContext';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 
@@ -33,6 +33,7 @@ export const RecapStep = () => {
   const [references, setReferences] = useState<Reference[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
   
   console.log('📋 [RECAP] Context data:', {
     selectedTeam: selectedTeam?.length || 0,
@@ -85,6 +86,84 @@ export const RecapStep = () => {
     
     fetchData();
   }, []);
+
+  // Fonction de génération des CV
+  const handleGenerateCV = async () => {
+    console.log('🚀 [RECAP] Début génération des CV...');
+    setGenerating(true);
+    
+    try {
+      // Préparer les données de l'équipe
+      const teamData = selectedTeam.map(memberId => {
+        const employee = employees.find(emp => emp.id === memberId);
+        return {
+          id: memberId,
+          name: employee?.name || `Employé ${memberId}`,
+          prenom: employee?.prenom || employee?.name?.split(' ')[0] || '',
+          nom: employee?.nom || employee?.name?.split(' ').slice(1).join(' ') || '',
+          fonction: employee?.fonction || 'Non spécifié',
+          agence: employee?.agence || 'Non spécifié',
+          niveau_expertise: employee?.niveau_expertise || 'Non spécifié'
+        };
+      });
+      
+      // Préparer les données des références
+      const referencesData = selectedReferences.map(refId => {
+        const reference = references.find(ref => ref.id === refId);
+        return {
+          id: refId,
+          nom_projet: reference?.nom_projet || `Projet ${refId}`,
+          client: reference?.client || 'Client non spécifié',
+          ville: reference?.ville || 'Non spécifié',
+          annee: reference?.annee || new Date().getFullYear(),
+          type_mission: reference?.type_mission || 'Non spécifié',
+          montant: reference?.montant || 0,
+          description_projet: reference?.description_projet || 'Aucune description'
+        };
+      });
+      
+      console.log('📊 [RECAP] Données préparées:', {
+        teamData: teamData.length,
+        referencesData: referencesData.length,
+        associations: Object.keys(referenceAssociation).length
+      });
+      
+      // Appel API pour générer les CV
+      const response = await fetch(`${BACKEND_URL}/api/generate-cv`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          teamData,
+          referencesData,
+          associations: referenceAssociation
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erreur lors de la génération');
+      }
+      
+      const result = await response.json();
+      console.log('✅ [RECAP] CV générés avec succès:', result);
+      
+      // Afficher un message de succès et rediriger vers les téléchargements
+      alert(`✅ ${result.totalFiles} CV générés avec succès !\n\nVous allez être redirigé vers la page de téléchargement.`);
+      
+      // Redirection vers la page downloads
+      setTimeout(() => {
+        navigate('/downloads');
+      }, 1000);
+      
+    } catch (error) {
+      console.error('❌ [RECAP] Erreur génération CV:', error);
+      alert(`❌ Erreur lors de la génération des CV:\n${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   // Validation du workflow
   const isWorkflowValid = selectedTeam.length > 0 && selectedReferences.length > 0;
@@ -198,14 +277,16 @@ export const RecapStep = () => {
           ← Modifier les associations
         </Button>
         <Button 
-          onClick={() => {
-            console.log('🚀 [RECAP] Génération des CV...');
-            // TODO: Implémenter la génération des CV
-            alert('Génération des CV - À implémenter');
+          onClick={handleGenerateCV}
+          disabled={generating}
+          style={{ 
+            padding: '12px 24px', 
+            backgroundColor: generating ? '#9ca3af' : '#2563eb', 
+            color: 'white',
+            cursor: generating ? 'not-allowed' : 'pointer'
           }}
-          style={{ padding: '12px 24px', backgroundColor: '#2563eb', color: 'white' }}
         >
-          🚀 Générer les CV
+          {generating ? '⏳ Génération en cours...' : '🚀 Générer les CV'}
         </Button>
       </div>
       

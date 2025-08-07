@@ -34,6 +34,9 @@ class DatabaseManager {
             await this.createTables();
             console.log('✅ Schéma de base de données créé');
 
+            // Corriger la table salaries_references si nécessaire
+            await this.fixSalariesReferencesTable();
+
             // Vérifier si des données existent déjà
             const salariesCount = await this.get("SELECT COUNT(*) as count FROM salaries");
             
@@ -51,6 +54,41 @@ class DatabaseManager {
         } catch (error) {
             console.error('❌ Erreur initialisation base de données:', error);
             throw error;
+        }
+    }
+
+
+
+    /**
+     * Corrige la table salaries_references si nécessaire
+     */
+    async fixSalariesReferencesTable() {
+        try {
+            console.log('🔧 Vérification/correction table salaries_references...');
+            
+            // Supprimer la table existante si elle a le mauvais schéma
+            await this.run('DROP TABLE IF EXISTS salaries_references');
+            
+            // Recréer la table avec le bon schéma
+            await this.run(`
+                CREATE TABLE salaries_references (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id_salarie INTEGER NOT NULL,
+                    id_reference INTEGER NOT NULL,
+                    role_projet VARCHAR(100),
+                    date_debut DATE,
+                    date_fin DATE,
+                    principal BOOLEAN DEFAULT 0,
+                    FOREIGN KEY (id_salarie) REFERENCES salaries(id_salarie) ON DELETE CASCADE,
+                    FOREIGN KEY (id_reference) REFERENCES projets_references(id_reference) ON DELETE CASCADE,
+                    UNIQUE(id_salarie, id_reference)
+                )
+            `);
+            
+            console.log('✅ Table salaries_references corrigée');
+        } catch (error) {
+            console.error('❌ Erreur correction table salaries_references:', error.message);
+            // Ne pas faire planter l'init si la correction échoue
         }
     }
 
@@ -101,7 +139,7 @@ class DatabaseManager {
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 id_salarie INTEGER NOT NULL,
                 id_reference INTEGER NOT NULL,
-                role_projet VARCHAR(100) NOT NULL,
+                role_projet VARCHAR(100),
                 date_debut DATE,
                 date_fin DATE,
                 principal BOOLEAN DEFAULT 0,
@@ -435,7 +473,7 @@ class DatabaseManager {
         const sql = `
             SELECT 
                 id_reference, nom_projet, ville, annee, type_mission,
-                montant, description_courte, client, duree_mois, surface,
+                montant, description_courte AS description_projet, client, duree_mois, surface,
                 date_ajout
             FROM projets_references 
             ORDER BY annee DESC, nom_projet
@@ -476,7 +514,7 @@ class DatabaseManager {
         const sql = `
             INSERT INTO projets_references (
                 nom_projet, ville, annee, type_mission, montant,
-                description_projet, client
+                description_courte, client
             ) VALUES (?, ?, ?, ?, ?, ?, ?)
         `;
         const result = await this.run(sql, [
@@ -494,7 +532,7 @@ class DatabaseManager {
         const sql = `
             UPDATE projets_references 
             SET nom_projet = ?, ville = ?, annee = ?, type_mission = ?, 
-                montant = ?, description_projet = ?, client = ?, 
+                montant = ?, description_courte = ?, client = ?, 
                 date_modification = CURRENT_TIMESTAMP
             WHERE id_reference = ?
         `;
@@ -664,6 +702,129 @@ class DatabaseManager {
         const sql = `UPDATE niveaux_expertise SET actif = 0, date_modification = CURRENT_TIMESTAMP WHERE id_niveau = ?`;
         return await this.run(sql, [id]);
     }
+
+    // ===================================
+    // GESTION DES ASSOCIATIONS SALARIÉS-RÉFÉRENCES
+    // ===================================
+
+    /**
+     * Récupère les références associées à un salarié
+     */
+    async getSalarieReferences(salarieId) {
+        const sql = `
+            SELECT 
+                pr.*,
+                sr.role_projet,
+                sr.date_debut,
+                sr.date_fin,
+                sr.principal
+            FROM projets_references pr
+            INNER JOIN salaries_references sr ON pr.id_reference = sr.id_reference
+            WHERE sr.id_salarie = ?
+            ORDER BY sr.principal DESC, pr.annee DESC
+        `;
+        return await this.all(sql, [salarieId]);
+    }
+
+    /**
+     * Associe une référence à un salarié
+     */
+    async addSalarieReference(salarieId, referenceId, options = {}) {
+        const sql = `
+            INSERT INTO salaries_references 
+            (id_salarie, id_reference, role_projet, date_debut, date_fin, principal)
+            VALUES (?, ?, ?, ?, ?, ?)
+        `;
+        return await this.run(sql, [
+            salarieId,
+            referenceId,
+            options.role_projet || null,
+            options.date_debut || null,
+            options.date_fin || null,
+            options.principal || false
+        ]);
+    }
+
+    /**
+     * Supprime l'association entre un salarié et une référence
+     */
+    async removeSalarieReference(salarieId, referenceId) {
+        const sql = `
+            DELETE FROM salaries_references 
+            WHERE id_salarie = ? AND id_reference = ?
+        `;
+        return await this.run(sql, [salarieId, referenceId]);
+    }
+
+    /**
+     * Met à jour une association salarié-référence
+     */
+    async updateSalarieReference(salarieId, referenceId, options = {}) {
+        const sql = `
+            UPDATE salaries_references 
+            SET role_projet = ?, date_debut = ?, date_fin = ?, principal = ?
+            WHERE id_salarie = ? AND id_reference = ?
+        `;
+        return await this.run(sql, [
+            options.role_projet || null,
+            options.date_debut || null,
+            options.date_fin || null,
+            options.principal || false,
+            salarieId,
+            referenceId
+        ]);
+    }
+
+    /**
+     * Récupère tous les salariés avec leurs références
+     */
+    async getSalariesWithReferences() {
+        try {
+            const salaries = await this.getSalaries();
+            
+            for (const salarie of salaries) {
+                try {
+                    salarie.references = await this.getSalarieReferences(salarie.id_salarie);
+                } catch (error) {
+                    console.error(`Erreur récupération références pour salarié ${salarie.id_salarie}:`, error.message);
+                    salarie.references = []; // Valeur par défaut si erreur
+                }
+            }
+            
+            return salaries;
+        } catch (error) {
+            console.error('Erreur getSalariesWithReferences:', error.message);
+            throw error;
+        }
+    }
+
+    /**
+     * Définit les références par défaut d'un salarié (remplace toutes les associations existantes)
+     */
+    async setSalarieDefaultReferences(salarieId, referenceIds) {
+        try {
+            console.log(`🔧 [DB] setSalarieDefaultReferences - salarié: ${salarieId}, références:`, referenceIds);
+            
+            // Supprimer toutes les associations existantes
+            console.log(`🗑️ [DB] Suppression associations existantes pour salarié ${salarieId}`);
+            const deleteResult = await this.run('DELETE FROM salaries_references WHERE id_salarie = ?', [salarieId]);
+            console.log(`✅ [DB] ${deleteResult.changes || 0} associations supprimées`);
+            
+            // Ajouter les nouvelles associations
+            console.log(`➕ [DB] Ajout de ${referenceIds.length} nouvelles associations`);
+            for (const referenceId of referenceIds) {
+                console.log(`➕ [DB] Ajout association: salarié ${salarieId} <-> référence ${referenceId}`);
+                await this.addSalarieReference(salarieId, referenceId, { principal: false });
+            }
+            
+            console.log(`✅ [DB] setSalarieDefaultReferences terminé avec succès`);
+            return { success: true, count: referenceIds.length };
+        } catch (error) {
+            console.error(`❌ [DB] Erreur setSalarieDefaultReferences:`, error.message);
+            throw error;
+        }
+    }
+
 }
 
 // Instance singleton

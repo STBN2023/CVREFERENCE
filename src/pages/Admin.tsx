@@ -97,6 +97,103 @@ function Admin() {
   const [fonctions, setFonctions] = useState<string[]>([]);
   const [niveaux, setNiveaux] = useState<string[]>([]);
 
+  // Fonction de rechargement des données
+  const reloadData = async () => {
+    try {
+      const [salariesResponse, referencesResponse, agencesResponse, fonctionsResponse, niveauxResponse] = await Promise.all([
+        fetch(`${BACKEND_URL}/api/salaries`),
+        fetch(`${BACKEND_URL}/api/references`),
+        fetch(`${BACKEND_URL}/api/agences`),
+        fetch(`${BACKEND_URL}/api/fonctions`),
+        fetch(`${BACKEND_URL}/api/niveaux`),
+      ]);
+
+      // Charger les salariés
+      if (salariesResponse.ok) {
+        const salariesData = await salariesResponse.json();
+        const salariesFormatted = salariesData.salaries.map((salary: any) => ({
+          id: salary.id_salarie.toString(),
+          nom: salary.nom,
+          prenom: salary.prenom,
+          agence: salary.agence,
+          fonction: salary.fonction,
+          niveau: salary.niveau_expertise,
+          actif: salary.actif,
+          template: 'classic'
+        }));
+        setSalaries(salariesFormatted);
+      }
+
+      // Charger les références avec associations
+      if (referencesResponse.ok) {
+        const referencesData = await referencesResponse.json();
+        
+        // Charger les associations pour chaque référence
+        const referencesWithSalaries = await Promise.all(
+          referencesData.references.map(async (ref: any) => {
+            try {
+              const salariesResponse = await fetch(`${BACKEND_URL}/api/references/${ref.id_reference}/salaries`);
+              let associatedSalaries: string[] = [];
+              
+              if (salariesResponse.ok) {
+                const salariesData = await salariesResponse.json();
+                associatedSalaries = salariesData.salaries.map((s: any) => s.id_salarie.toString());
+              }
+              
+              return {
+                id: ref.id_reference.toString(),
+                nom_projet: ref.nom_projet,
+                client: ref.client,
+                ville: ref.ville,
+                annee: ref.annee,
+                type_mission: ref.type_mission,
+                montant: ref.montant,
+                description_projet: ref.description_projet,
+                salaries: associatedSalaries
+              };
+            } catch (error) {
+              console.error(`Erreur chargement associations référence ${ref.id_reference}:`, error);
+              return {
+                id: ref.id_reference.toString(),
+                nom_projet: ref.nom_projet,
+                client: ref.client,
+                ville: ref.ville,
+                annee: ref.annee,
+                type_mission: ref.type_mission,
+                montant: ref.montant,
+                description_projet: ref.description_projet,
+                salaries: []
+              };
+            }
+          })
+        );
+        
+        setReferences(referencesWithSalaries);
+      }
+
+      // Charger les référentiels
+      if (agencesResponse.ok) {
+        const agencesData = await agencesResponse.json();
+        setAgences(agencesData.agences.filter((a: any) => a.actif).map((a: any) => a.nom));
+      }
+
+      if (fonctionsResponse.ok) {
+        const fonctionsData = await fonctionsResponse.json();
+        setFonctions(fonctionsData.fonctions.filter((f: any) => f.actif).map((f: any) => f.nom));
+      }
+
+      if (niveauxResponse.ok) {
+        const niveauxData = await niveauxResponse.json();
+        setNiveaux(niveauxData.niveaux.filter((n: any) => n.actif).map((n: any) => n.nom));
+      }
+
+      setLoading(false);
+    } catch (error) {
+      console.error('Erreur lors du chargement des données:', error);
+      setLoading(false);
+    }
+  };
+
   // Charger les données depuis l'API
   useEffect(() => {
     const fetchData = async () => {
@@ -128,18 +225,48 @@ function Admin() {
         // Charger les références
         if (referencesResponse.ok) {
           const referencesData = await referencesResponse.json();
-          const referencesFormatted = referencesData.references.map((ref: any) => ({
-            id: ref.id_reference.toString(),
-            nom_projet: ref.nom_projet,
-            client: ref.client,
-            ville: ref.ville,
-            annee: ref.annee,
-            type_mission: ref.type_mission,
-            montant: ref.montant,
-            description_projet: ref.description_projet,
-            salaries: [] // À implémenter plus tard
-          }));
-          setReferences(referencesFormatted);
+          
+          // Charger les associations pour chaque référence
+          const referencesWithSalaries = await Promise.all(
+            referencesData.references.map(async (ref: any) => {
+              try {
+                const salariesResponse = await fetch(`${BACKEND_URL}/api/references/${ref.id_reference}/salaries`);
+                let associatedSalaries: string[] = [];
+                
+                if (salariesResponse.ok) {
+                  const salariesData = await salariesResponse.json();
+                  associatedSalaries = salariesData.salaries.map((s: any) => s.id_salarie.toString());
+                }
+                
+                return {
+                  id: ref.id_reference.toString(),
+                  nom_projet: ref.nom_projet,
+                  client: ref.client,
+                  ville: ref.ville,
+                  annee: ref.annee,
+                  type_mission: ref.type_mission,
+                  montant: ref.montant,
+                  description_projet: ref.description_projet,
+                  salaries: associatedSalaries
+                };
+              } catch (error) {
+                console.error(`Erreur chargement associations référence ${ref.id_reference}:`, error);
+                return {
+                  id: ref.id_reference.toString(),
+                  nom_projet: ref.nom_projet,
+                  client: ref.client,
+                  ville: ref.ville,
+                  annee: ref.annee,
+                  type_mission: ref.type_mission,
+                  montant: ref.montant,
+                  description_projet: ref.description_projet,
+                  salaries: []
+                };
+              }
+            })
+          );
+          
+          setReferences(referencesWithSalaries);
         }
 
         // Charger les référentiels
@@ -357,6 +484,30 @@ function Admin() {
       });
 
       if (response.ok) {
+        const newReference = await response.json();
+        const referenceId = newReference.reference.id_reference;
+        
+        // Créer les associations salariés-références
+        if (referenceForm.salaries.length > 0) {
+          console.log(`🔗 [ADMIN] Création associations pour référence ${referenceId}:`, referenceForm.salaries);
+          
+          for (const salarieId of referenceForm.salaries) {
+            try {
+              await fetch(`${BACKEND_URL}/api/salaries/${salarieId}/references`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                  id_reference: referenceId,
+                  role_projet: null,
+                  principal: false 
+                })
+              });
+            } catch (error) {
+              console.error(`Erreur association salarié ${salarieId}:`, error);
+            }
+          }
+        }
+        
         showSuccess("Référence ajoutée avec succès !");
         setOpenReference(false);
         setReferenceForm({
@@ -371,23 +522,8 @@ function Admin() {
         });
         setEditReferenceId(null);
         
-        // Recharger les données depuis l'API
-        const referencesResponse = await fetch(`${BACKEND_URL}/api/references`);
-        if (referencesResponse.ok) {
-          const referencesData = await referencesResponse.json();
-          const referencesFormatted = referencesData.references.map((ref: any) => ({
-            id: ref.id_reference.toString(),
-            nom_projet: ref.nom_projet,
-            client: ref.client,
-            ville: ref.ville,
-            annee: ref.annee,
-            type_mission: ref.type_mission,
-            montant: ref.montant,
-            description_projet: ref.description_projet,
-            salaries: []
-          }));
-          setReferences(referencesFormatted);
-        }
+        // Recharger toutes les données pour mettre à jour les associations
+        await reloadData();
       } else {
         const errorData = await response.json();
         showError(`Erreur lors de l'ajout: ${errorData.message || 'Erreur inconnue'}`);
@@ -421,6 +557,22 @@ function Admin() {
       });
 
       if (response.ok) {
+        // Mettre à jour les associations salariés-références
+        console.log(`🔗 [ADMIN] Mise à jour associations pour référence ${editReferenceId}:`, referenceForm.salaries);
+        
+        // Utiliser l'endpoint PUT pour remplacer toutes les associations
+        try {
+          await fetch(`${BACKEND_URL}/api/salaries/references/${editReferenceId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              salarieIds: referenceForm.salaries.map(id => parseInt(id))
+            })
+          });
+        } catch (error) {
+          console.error('Erreur mise à jour associations:', error);
+        }
+        
         showSuccess("Référence modifiée avec succès !");
         setOpenReference(false);
         setEditReferenceId(null);
@@ -435,23 +587,8 @@ function Admin() {
           salaries: [],
         });
         
-        // Recharger les données depuis l'API
-        const referencesResponse = await fetch(`${BACKEND_URL}/api/references`);
-        if (referencesResponse.ok) {
-          const referencesData = await referencesResponse.json();
-          const referencesFormatted = referencesData.references.map((ref: any) => ({
-            id: ref.id_reference.toString(),
-            nom_projet: ref.nom_projet,
-            client: ref.client,
-            ville: ref.ville,
-            annee: ref.annee,
-            type_mission: ref.type_mission,
-            montant: ref.montant,
-            description_projet: ref.description_projet,
-            salaries: []
-          }));
-          setReferences(referencesFormatted);
-        }
+        // Recharger toutes les données pour mettre à jour les associations
+        await reloadData();
       } else {
         const errorData = await response.json();
         showError(`Erreur lors de la modification: ${errorData.message || 'Erreur inconnue'}`);
@@ -504,17 +641,44 @@ function Admin() {
     setOpenSalarie(true);
   };
 
-  const openEditReference = (r: Reference) => {
-    setReferenceForm({
-      nom_projet: r.nom_projet,
-      client: r.client,
-      ville: r.ville,
-      annee: r.annee,
-      type_mission: r.type_mission,
-      montant: r.montant,
-      description_projet: r.description_projet,
-      salaries: r.salaries,
-    });
+  const openEditReference = async (r: Reference) => {
+    // Charger les associations existantes depuis l'API
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/references/${r.id}/salaries`);
+      let existingSalaries: string[] = [];
+      
+      if (response.ok) {
+        const data = await response.json();
+        existingSalaries = data.salaries.map((s: any) => s.id_salarie.toString());
+        console.log(`🔗 [ADMIN] Associations chargées pour référence ${r.id}:`, existingSalaries);
+      } else {
+        console.warn(`⚠️ [ADMIN] Impossible de charger les associations pour la référence ${r.id}`);
+      }
+      
+      setReferenceForm({
+        nom_projet: r.nom_projet,
+        client: r.client,
+        ville: r.ville,
+        annee: r.annee,
+        type_mission: r.type_mission,
+        montant: r.montant,
+        description_projet: r.description_projet,
+        salaries: existingSalaries,
+      });
+    } catch (error) {
+      console.error('❌ [ADMIN] Erreur chargement associations:', error);
+      setReferenceForm({
+        nom_projet: r.nom_projet,
+        client: r.client,
+        ville: r.ville,
+        annee: r.annee,
+        type_mission: r.type_mission,
+        montant: r.montant,
+        description_projet: r.description_projet,
+        salaries: [],
+      });
+    }
+    
     setEditReferenceId(r.id);
     setOpenReference(true);
   };

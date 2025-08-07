@@ -13,6 +13,7 @@ import { BurgerMenu } from "@/components/BurgerMenu";
 import ReferenceAssociation from "./pages/ReferenceAssociation";
 import Downloads from "./pages/Downloads";
 import Referentials from "./pages/Referentials";
+import DefaultReferences from './pages/DefaultReferences';
 import { RainbowThemeButton } from "@/components/RainbowThemeButton";
 
 const queryClient = new QueryClient();
@@ -31,9 +32,10 @@ const App = () => (
           <Route path="/references" element={<ReferenceSelection />} />
           <Route path="/association" element={<ReferenceAssociation />} />
           <Route path="/recap" element={<Recap />} />
+          <Route path="/referentials" element={<Referentials />} />
+          <Route path="/default-references" element={<DefaultReferences />} />
           <Route path="/downloads" element={<Downloads />} />
           <Route path="/admin" element={<Admin />} />
-          <Route path="/referentials" element={<Referentials />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
