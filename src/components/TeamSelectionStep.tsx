@@ -93,8 +93,14 @@ export const TeamSelectionStep = () => {
   };
 
   const handleValidate = () => {
-    setSelectedTeam(selectedIds);
-    showSuccess("Équipe validée !");
+    // Récupérer les objets employés complets pour les IDs sélectionnés
+    const selectedEmployees = employees.filter(emp => selectedIds.includes(emp.id));
+    
+    console.log('🎯 [TEAM] Équipe sélectionnée:', selectedEmployees);
+    
+    setSelectedTeam(selectedEmployees);
+    showSuccess(`Équipe de ${selectedEmployees.length} personnes validée !`);
+    
     setTimeout(() => {
       navigate("/references");
     }, 600);

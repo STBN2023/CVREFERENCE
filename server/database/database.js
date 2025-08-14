@@ -36,6 +36,9 @@ class DatabaseManager {
 
             // Corriger la table salaries_references si nécessaire
             await this.fixSalariesReferencesTable();
+            
+            // Ajouter la contrainte d'unicité sur les références
+            await this.addReferencesUniquenessConstraint();
 
             // Vérifier si des données existent déjà
             const salariesCount = await this.get("SELECT COUNT(*) as count FROM salaries");
@@ -63,32 +66,104 @@ class DatabaseManager {
      * Corrige la table salaries_references si nécessaire
      */
     async fixSalariesReferencesTable() {
+        console.log('🔧 Vérification/correction table salaries_references...');
+        
         try {
-            console.log('🔧 Vérification/correction table salaries_references...');
+            // Vérifier si la table existe et a la bonne structure
+            const tableInfo = await this.all("PRAGMA table_info(salaries_references)");
             
-            // Supprimer la table existante si elle a le mauvais schéma
-            await this.run('DROP TABLE IF EXISTS salaries_references');
-            
-            // Recréer la table avec le bon schéma
-            await this.run(`
-                CREATE TABLE salaries_references (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    id_salarie INTEGER NOT NULL,
-                    id_reference INTEGER NOT NULL,
-                    role_projet VARCHAR(100),
-                    date_debut DATE,
-                    date_fin DATE,
-                    principal BOOLEAN DEFAULT 0,
-                    FOREIGN KEY (id_salarie) REFERENCES salaries(id_salarie) ON DELETE CASCADE,
-                    FOREIGN KEY (id_reference) REFERENCES projets_references(id_reference) ON DELETE CASCADE,
-                    UNIQUE(id_salarie, id_reference)
-                )
-            `);
+            if (tableInfo.length === 0) {
+                console.log('⚠️ Table salaries_references manquante, création...');
+                await this.run(`
+                    CREATE TABLE salaries_references (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        id_salarie INTEGER NOT NULL,
+                        id_reference INTEGER NOT NULL,
+                        role_projet VARCHAR(100),
+                        date_debut DATE,
+                        date_fin DATE,
+                        principal BOOLEAN DEFAULT 0,
+                        FOREIGN KEY (id_salarie) REFERENCES salaries(id_salarie) ON DELETE CASCADE,
+                        FOREIGN KEY (id_reference) REFERENCES projets_references(id_reference) ON DELETE CASCADE,
+                        UNIQUE(id_salarie, id_reference)
+                    )
+                `);
+            }
             
             console.log('✅ Table salaries_references corrigée');
         } catch (error) {
-            console.error('❌ Erreur correction table salaries_references:', error.message);
-            // Ne pas faire planter l'init si la correction échoue
+            console.error('❌ Erreur lors de la correction de salaries_references:', error);
+        }
+    }
+
+    /**
+     * Ajouter la contrainte d'unicité sur les références si nécessaire
+     */
+    async addReferencesUniquenessConstraint() {
+        console.log('🔧 Vérification contrainte d\'unicité sur projets_references...');
+        
+        try {
+            // Vérifier si la contrainte existe déjà
+            const tableInfo = await this.all("SELECT sql FROM sqlite_master WHERE type='table' AND name='projets_references'");
+            
+            if (tableInfo.length > 0 && !tableInfo[0].sql.includes('UNIQUE(nom_projet, client, annee)')) {
+                console.log('⚠️ Contrainte d\'unicité manquante, migration de la table...');
+                
+                // Créer une nouvelle table avec la contrainte
+                await this.run(`
+                    CREATE TABLE projets_references_new (
+                        id_reference INTEGER PRIMARY KEY AUTOINCREMENT,
+                        nom_projet VARCHAR(255) NOT NULL,
+                        ville VARCHAR(100) NOT NULL,
+                        annee INTEGER NOT NULL,
+                        type_mission VARCHAR(100) NOT NULL,
+                        montant DECIMAL(12,2),
+                        description_courte VARCHAR(500),
+                        description_longue TEXT,
+                        client VARCHAR(255) NOT NULL,
+                        duree_mois INTEGER,
+                        surface DECIMAL(10,2),
+                        date_ajout DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        date_modification DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(nom_projet, client, annee)
+                    )
+                `);
+                
+                // Copier les données en supprimant les doublons
+                await this.run(`
+                    INSERT INTO projets_references_new 
+                    SELECT * FROM projets_references 
+                    WHERE id_reference IN (
+                        SELECT MIN(id_reference) 
+                        FROM projets_references 
+                        GROUP BY nom_projet, client, annee
+                    )
+                `);
+                
+                // Mettre à jour les références dans la table de liaison
+                await this.run(`
+                    UPDATE salaries_references 
+                    SET id_reference = (
+                        SELECT MIN(pr.id_reference) 
+                        FROM projets_references pr 
+                        JOIN projets_references pr_old ON pr.nom_projet = pr_old.nom_projet 
+                            AND pr.client = pr_old.client 
+                            AND pr.annee = pr_old.annee
+                        WHERE pr_old.id_reference = salaries_references.id_reference
+                    )
+                    WHERE id_reference NOT IN (SELECT id_reference FROM projets_references_new)
+                `);
+                
+                // Supprimer l'ancienne table et renommer la nouvelle
+                await this.run('DROP TABLE projets_references');
+                await this.run('ALTER TABLE projets_references_new RENAME TO projets_references');
+                
+                console.log('✅ Contrainte d\'unicité ajoutée avec suppression des doublons');
+            } else {
+                console.log('✅ Contrainte d\'unicité déjà présente');
+            }
+        } catch (error) {
+            console.error('❌ Erreur lors de l\'ajout de la contrainte d\'unicité:', error);
         }
     }
 
@@ -102,10 +177,10 @@ class DatabaseManager {
                 id_salarie INTEGER PRIMARY KEY AUTOINCREMENT,
                 nom VARCHAR(100) NOT NULL,
                 prenom VARCHAR(100) NOT NULL,
-                agence VARCHAR(50) NOT NULL,
-                fonction VARCHAR(50) NOT NULL,
-                niveau_expertise VARCHAR(20) NOT NULL,
-                email VARCHAR(255) UNIQUE NOT NULL,
+                agence VARCHAR(50),
+                fonction VARCHAR(50),
+                niveau_expertise VARCHAR(20),
+                email VARCHAR(255) UNIQUE,
                 telephone VARCHAR(20),
                 chemin_cv VARCHAR(255),
                 date_creation DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -129,7 +204,8 @@ class DatabaseManager {
                 duree_mois INTEGER,
                 surface DECIMAL(10,2),
                 date_ajout DATETIME DEFAULT CURRENT_TIMESTAMP,
-                date_modification DATETIME DEFAULT CURRENT_TIMESTAMP
+                date_modification DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(nom_projet, client, annee)
             )
         `);
 
@@ -411,7 +487,6 @@ class DatabaseManager {
                 niveau_expertise, email, telephone, chemin_cv,
                 date_creation, actif
             FROM salaries 
-            WHERE actif = 1 
             ORDER BY nom, prenom
         `;
         return await this.all(sql);
@@ -455,10 +530,14 @@ class DatabaseManager {
                 telephone = ?, actif = ?, date_modification = CURRENT_TIMESTAMP
             WHERE id_salarie = ?
         `;
+        
+        // Convertir le booléen en entier pour SQLite
+        const actifValue = salarie.actif !== undefined ? (salarie.actif ? 1 : 0) : 1;
+        
         return await this.run(sql, [
             salarie.nom, salarie.prenom, salarie.agence, salarie.fonction, 
             salarie.niveau_expertise, salarie.telephone || null, 
-            salarie.actif !== undefined ? salarie.actif : 1, id
+            actifValue, id
         ]);
     }
 
@@ -508,19 +587,70 @@ class DatabaseManager {
     }
 
     /**
+     * Récupère les dernières références pour plusieurs salariés
+     * @param {Array} salarieIds - Liste des IDs des salariés
+     * @param {number} limit - Nombre maximum de références par salarié (défaut: 5)
+     * @returns {Object} Objet avec salarieId comme clé et array de références comme valeur
+     */
+    async getLatestReferencesBySalaries(salarieIds, limit = 5) {
+        if (!salarieIds || salarieIds.length === 0) {
+            return {};
+        }
+
+        const result = {};
+        
+        // Pour chaque salarié, récupérer ses dernières références
+        for (const salarieId of salarieIds) {
+            console.log(`🔍 [DB] Recherche références pour salarié ${salarieId}`);
+            
+            const sql = `
+                SELECT 
+                    r.id_reference, r.nom_projet, r.ville, r.annee, r.type_mission,
+                    r.montant, r.description_courte AS description_projet, r.client,
+                    sr.role_projet, sr.date_debut, sr.date_fin, sr.principal
+                FROM projets_references r
+                INNER JOIN salaries_references sr ON r.id_reference = sr.id_reference
+                WHERE sr.id_salarie = ?
+                ORDER BY r.annee DESC, sr.principal DESC, r.nom_projet
+                LIMIT ?
+            `;
+            
+            const references = await this.all(sql, [salarieId, limit]);
+            console.log(`📅 [DB] Salarié ${salarieId}: ${references.length} références trouvées`);
+            
+            result[salarieId] = references;
+        }
+        
+        return result;
+    }
+
+    /**
+     * Alias pour getReferencesBySalarie (compatibilité API)
+     */
+    async getSalarieReferences(salarieId) {
+        return await this.getReferencesBySalarie(salarieId);
+    }
+
+    /**
      * Ajoute une nouvelle référence
      */
     async addReference(reference) {
         const sql = `
             INSERT INTO projets_references (
                 nom_projet, ville, annee, type_mission, montant,
-                description_courte, client
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                description_courte, client, duree_mois, surface
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
         const result = await this.run(sql, [
-            reference.nom_projet, reference.ville, reference.annee,
-            reference.type_mission, reference.montant, 
-            reference.description_projet, reference.client
+            reference.nom_projet, 
+            reference.ville || '', 
+            reference.annee || new Date().getFullYear(),
+            reference.type_mission || '', 
+            reference.montant || null, 
+            reference.description_projet || reference.description_courte || '',
+            reference.client,
+            reference.duree_mois || null,
+            reference.surface || null
         ]);
         return { id: result.lastID };
     }
@@ -533,13 +663,20 @@ class DatabaseManager {
             UPDATE projets_references 
             SET nom_projet = ?, ville = ?, annee = ?, type_mission = ?, 
                 montant = ?, description_courte = ?, client = ?, 
-                date_modification = CURRENT_TIMESTAMP
+                duree_mois = ?, surface = ?, date_modification = CURRENT_TIMESTAMP
             WHERE id_reference = ?
         `;
         return await this.run(sql, [
-            reference.nom_projet, reference.ville, reference.annee,
-            reference.type_mission, reference.montant, 
-            reference.description_projet, reference.client, id
+            reference.nom_projet, 
+            reference.ville, 
+            reference.annee,
+            reference.type_mission, 
+            reference.montant, 
+            reference.description_projet || reference.description_courte,
+            reference.client, 
+            reference.duree_mois || null,
+            reference.surface || null,
+            id
         ]);
     }
 
@@ -638,6 +775,36 @@ class DatabaseManager {
             VALUES (?, ?, ?)
         `;
         return await this.run(sql, [fonction.nom, fonction.description, 1]);
+    }
+
+    /**
+     * Ajoute une fonction avec contrôle d'unicité (pour import Excel)
+     */
+    async addFonctionWithUniqueness(fonction) {
+        // Vérifier si la fonction existe déjà
+        const existingFunction = await this.get(
+            'SELECT id_fonction FROM fonctions WHERE LOWER(nom) = LOWER(?)',
+            [fonction.Fonction || fonction.nom]
+        );
+        
+        if (existingFunction) {
+            console.log(`⚠️ [DB] Fonction "${fonction.Fonction || fonction.nom}" existe déjà, ignorée`);
+            return { exists: true, id: existingFunction.id_fonction };
+        }
+        
+        // Ajouter la nouvelle fonction
+        const sql = `
+            INSERT INTO fonctions (nom, description, actif) 
+            VALUES (?, ?, ?)
+        `;
+        const result = await this.run(sql, [
+            fonction.Fonction || fonction.nom, 
+            fonction.Description || fonction.description || '', 
+            1
+        ]);
+        
+        console.log(`✅ [DB] Fonction "${fonction.Fonction || fonction.nom}" ajoutée avec ID: ${result.lastID}`);
+        return { exists: false, id: result.lastID };
     }
 
     /**
@@ -823,6 +990,112 @@ class DatabaseManager {
             console.error(`❌ [DB] Erreur setSalarieDefaultReferences:`, error.message);
             throw error;
         }
+    }
+
+    /**
+     * Ajoute un salarié avec contrôle d'unicité (pour import Excel)
+     */
+    async addSalarieWithUniqueness(salarie) {
+        // Vérifier si le salarié existe déjà (nom + prénom)
+        const existingSalarie = await this.get(
+            'SELECT id_salarie FROM salaries WHERE LOWER(nom) = LOWER(?) AND LOWER(prenom) = LOWER(?)',
+            [salarie.Nom || salarie.nom, salarie.Prenom || salarie.prenom]
+        );
+        
+        if (existingSalarie) {
+            console.log(`⚠️ [DB] Salarié "${salarie.Prenom || salarie.prenom} ${salarie.Nom || salarie.nom}" existe déjà, ignoré`);
+            return { exists: true, id: existingSalarie.id_salarie };
+        }
+        
+        // Ajouter le nouveau salarié
+        const email = `${(salarie.Prenom || salarie.prenom).toLowerCase()}.${(salarie.Nom || salarie.nom).toLowerCase()}@entreprise.com`;
+        const sql = `
+            INSERT INTO salaries (nom, prenom, agence, fonction, niveau_expertise, email, telephone, actif)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+        const result = await this.run(sql, [
+            salarie.Nom || salarie.nom,
+            salarie.Prenom || salarie.prenom,
+            salarie.Agence || salarie.agence || '',
+            salarie.Fonction || salarie.fonction || '',
+            salarie.Niveau_Expertise || salarie.niveau_expertise || '',
+            salarie.Email || email,
+            salarie.Telephone || salarie.telephone || null,
+            1
+        ]);
+        
+        console.log(`✅ [DB] Salarié "${salarie.Prenom || salarie.prenom} ${salarie.Nom || salarie.nom}" ajouté avec ID: ${result.id}`);
+        return { exists: false, id: result.id };
+    }
+
+    /**
+     * Supprime un salarié par son ID
+     */
+    async deleteSalarie(id) {
+        // D'abord supprimer les associations avec les références
+        await this.run('DELETE FROM salaries_references WHERE id_salarie = ?', [id]);
+        
+        // Ensuite supprimer le salarié
+        const result = await this.run('DELETE FROM salaries WHERE id_salarie = ?', [id]);
+        
+        console.log(`🗑️ [DB] Salarié avec ID ${id} supprimé`);
+        return result.changes > 0;
+    }
+
+    /**
+     * Supprime une référence par son ID
+     */
+    async deleteReference(id) {
+        // D'abord supprimer les associations avec les salariés
+        await this.run('DELETE FROM salaries_references WHERE id_reference = ?', [id]);
+        
+        // Ensuite supprimer la référence
+        const result = await this.run('DELETE FROM projets_references WHERE id_reference = ?', [id]);
+        
+        console.log(`🗑️ [DB] Référence avec ID ${id} supprimée`);
+        return result.changes > 0;
+    }
+
+    /**
+     * Ajoute une référence avec contrôle d'unicité (pour import Excel)
+     */
+    async addReferenceWithUniqueness(reference) {
+        // Vérifier si la référence existe déjà (nom_projet + client + année)
+        const existingReference = await this.get(
+            'SELECT id_reference FROM projets_references WHERE LOWER(nom_projet) = LOWER(?) AND LOWER(client) = LOWER(?) AND annee = ?',
+            [
+                reference.Nom_Projet || reference.nom_projet,
+                reference.Client || reference.client,
+                reference.Annee || reference.annee
+            ]
+        );
+        
+        if (existingReference) {
+            console.log(`⚠️ [DB] Référence "${reference.Nom_Projet || reference.nom_projet}" (${reference.Client || reference.client}, ${reference.Annee || reference.annee}) existe déjà, ignorée`);
+            return { exists: true, id: existingReference.id_reference };
+        }
+        
+        // Ajouter la nouvelle référence
+        const sql = `
+            INSERT INTO projets_references (
+                nom_projet, ville, annee, type_mission, montant,
+                description_courte, client, duree_mois, surface
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+        const result = await this.run(sql, [
+            reference.Nom_Projet || reference.nom_projet,
+            reference.Ville || reference.ville || '',
+            reference.Annee || reference.annee || new Date().getFullYear(),
+            reference.Type_Mission || reference.type_mission || '',
+            reference.Montant || reference.montant || null,
+            reference.Description || reference.description_courte || '',
+            reference.Client || reference.client,
+            reference.Duree_Mois || reference.duree_mois || null,
+            reference.Surface || reference.surface || null
+        ]);
+        
+        console.log(`✅ [DB] Référence "${reference.Nom_Projet || reference.nom_projet}" ajoutée avec ID: ${result.id}`);
+        return { exists: false, id: result.id };
     }
 
 }
